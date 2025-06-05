@@ -5,16 +5,18 @@ import com.ultimafronteira.world.Ambiente;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Random;
+import java.util.Collections; // Import para java.util.Collections
 
 public class GerenciadorDeEventos {
     private List<Evento> todosOsEventosPossiveis;
     private Random randomizador;
-<<<<<<< HEAD
-    private Evento eventoSorteadoAtual;
-=======
     private Evento eventoSorteadoAtual; // Para guardar o último evento sorteado
->>>>>>> f7209b58956d6d2fcbc7f29dfcf96ffd5093dbcd
 
+    /**
+     * Construtor do GerenciadorDeEventos.
+     * Inicializa a lista de eventos possíveis e o gerador de números aleatórios.
+     * Carrega os eventos padrão.
+     */
     public GerenciadorDeEventos() {
         this.todosOsEventosPossiveis = new ArrayList<>();
         this.randomizador = new Random();
@@ -22,70 +24,88 @@ public class GerenciadorDeEventos {
         inicializarEventosPadrao();
     }
 
+    /**
+     * Inicializa a lista com instâncias dos tipos de eventos padrão.
+     * Cada evento, ao ser instanciado com o construtor padrão,
+     * deverá ser capaz de sortear seus detalhes específicos ao ser executado.
+     */
     private void inicializarEventosPadrao() {
         this.todosOsEventosPossiveis.clear();
-<<<<<<< HEAD
 
+        // Adiciona instâncias dos eventos usando seus construtores padrão.
+        // A lógica de variação específica (ex: tipo de clima, tipo de criatura)
+        // deve estar dentro do método executar() de cada classe de evento
+        // quando são instanciadas desta forma.
         adicionarEventoPossivel(new EventoClimatico());
-        adicionarEventoPossivel(new EventoCriatura()); // O construtor de EventoCriatura definirá o tipo de criatura internamente.
+        adicionarEventoPossivel(new EventoCriatura());
         adicionarEventoPossivel(new EventoDescoberta());
         adicionarEventoPossivel(new EventoDoencaFerimento());
 
-=======
-        adicionarEventoPossivel(new EventoClimatico("Nevasca Repentina", "Uma nevasca forte e inesperada cobre a área.", 0.15, "Nevasca", 3, "Reduz visibilidade e aumenta o frio."));
-        adicionarEventoPossivel(new EventoClimatico("Onda de Calor Intenso", "O sol castiga impiedosamente, elevando a temperatura.", 0.12, "Calor Extremo", 2, "Aumenta a sede rapidamente."));
-        adicionarEventoPossivel(new EventoClimatico("Tempestade Violenta", "Nuvens escuras se formam e uma tempestade desaba.", 0.18, "Tempestade", 2, "Dificulta movimentação e pode haver raios."));
-        adicionarEventoPossivel(new EventoCriatura("Ataque de Lobo Faminto", "Um lobo surge das sombras, claramente faminto.", 0.20, "Lobo Faminto", "Médio", 10, 30, new String[]{"Lutar", "Fugir"}));
-        adicionarEventoPossivel(new EventoCriatura("Encontro com Cobra Venenosa", "Uma cobra venenosa e ágil cruza seu caminho.", 0.15, "Cobra Venenosa", "Médio", 8, 15, new String[]{"Lutar", "Fugir", "Desviar Cautelosamente"}));
-        adicionarEventoPossivel(new EventoCriatura("Bando de Corvos Furtivos", "Corvos observam dos galhos, parecendo inteligentes demais.", 0.08, "Corvos Furtivos", "Baixo (Psicológico)", 0, 5, new String[]{"Ignorar", "Espantar"}));
-        adicionarEventoPossivel(new EventoDescoberta("Abrigo Abandonado Seguro", "Você encontra um pequeno abrigo que parece seguro e contém alguns suprimentos.", 0.04, "Abrigo Abandonado", "Nenhuma"));
-        adicionarEventoPossivel(new EventoDescoberta("Fonte de Água Potável Escondida", "Você descobre uma nascente de água cristalina.", 0.05, "Fonte de Água Limpa", "Nenhuma"));
-        adicionarEventoPossivel(new EventoDescoberta("Pista em Ruínas Antigas", "Entre escombros, você encontra um artefato ou inscrição que parece importante.", 0.03, "Ruínas Misteriosas", "Requer Ferramenta"));
-        adicionarEventoPossivel(new EventoDoencaFerimento("Corte Profundo Acidental", "Ao manusear ferramentas ou explorar, você se corta feio.", 0.10, "Corte Profundo", "Perda de vida, risco de infecção.", "Bandagens, Antisséptico"));
-        adicionarEventoPossivel(new EventoDoencaFerimento("Mal-Estar Súbito", "Você começa a se sentir febril e fraco.", 0.08, "Febre Desconhecida", "Perda de energia e fome/sede aumentadas.", "Descanso, Remédio para febre"));
->>>>>>> f7209b58956d6d2fcbc7f29dfcf96ffd5093dbcd
+        // Para adicionar eventos pré-configurados específicos, você usaria os construtores parametrizados:
+        // Exemplo (assumindo que os construtores parametrizados existem e estão corretos):
+        // adicionarEventoPossivel(new EventoClimatico("Nevasca Suave", "Flocos de neve começam a cair.", 0.10, "Nevasca Leve", 2, "Visibilidade ligeiramente reduzida."));
+        // adicionarEventoPossivel(new EventoCriatura("Lobo Solitário", "Um lobo solitário observa de longe.", 0.05, "Lobo", "Baixo", 8, 20, new String[]{"Observar", "Ignorar"}, "criatura_lobo_solitario"));
     }
 
+    /**
+     * Adiciona um evento à lista de todos os eventos possíveis.
+     * @param evento O evento a ser adicionado.
+     */
     public void adicionarEventoPossivel(Evento evento) {
         if (evento != null) {
             this.todosOsEventosPossiveis.add(evento);
         }
     }
 
+    /**
+     * Tenta sortear e executar um evento da lista de eventos possíveis.
+     * A probabilidade de cada evento ocorrer é verificada.
+     *
+     * @param jogador O personagem do jogador.
+     * @param local O ambiente atual.
+     * @param numeroDoTurno O número do turno atual.
+     * @return Uma string descrevendo o evento ocorrido ou uma mensagem padrão se nenhum evento ocorrer.
+     */
     public String sortearEExecutarEvento(Personagem jogador, Ambiente local, int numeroDoTurno) {
         this.eventoSorteadoAtual = null;
         if (todosOsEventosPossiveis.isEmpty()) {
-<<<<<<< HEAD
-            return "O ar está estranhamente calmo.";
-=======
-            return "Nenhum evento possível cadastrado no gerenciador.";
->>>>>>> f7209b58956d6d2fcbc7f29dfcf96ffd5093dbcd
+            return "O ar está estranhamente calmo."; // Mensagem mais imersiva
         }
 
+        // Cria uma cópia da lista para embaralhar e tentar os eventos
         List<Evento> eventosCandidatos = new ArrayList<>(todosOsEventosPossiveis);
-        java.util.Collections.shuffle(eventosCandidatos, randomizador);
+        Collections.shuffle(eventosCandidatos, randomizador); // Embaralha para não testar sempre na mesma ordem
 
         for (Evento evento : eventosCandidatos) {
             if (evento.tentarOcorrer(jogador, local, numeroDoTurno)) {
-                this.eventoSorteadoAtual = evento;
+                this.eventoSorteadoAtual = evento; // Guarda o evento que ocorreu
                 StringBuilder sb = new StringBuilder();
                 if (evento instanceof EventoCriatura) {
                     sb.append("--- CONFRONTO IMINENTE! ---\n");
                 } else {
                     sb.append("--- OCORREU UM EVENTO! ---\n");
                 }
+                // Chama o executar do evento específico, que deve ter a lógica de variação interna
                 sb.append(evento.executar(jogador, local, numeroDoTurno));
                 return sb.toString();
             }
         }
-        return "Nenhum evento especial ocorreu desta vez.";
+        return "Nenhum evento especial ocorreu desta vez."; // Mensagem padrão se nenhum evento passar na sua probabilidade
     }
 
+    /**
+     * Retorna o último evento que foi sorteado e executado.
+     * @return O evento atual, ou null se nenhum evento ocorreu recentemente ou foi limpo.
+     */
     public Evento getEventoSorteadoAtual() {
         return eventoSorteadoAtual;
     }
 
-<<<<<<< HEAD
+    /**
+     * Retorna o evento atual especificamente como um EventoCriatura, se aplicável.
+     * Útil para aceder a métodos específicos de EventoCriatura após um confronto.
+     * @return O EventoCriatura atual, ou null se o evento atual não for uma criatura.
+     */
     public EventoCriatura getEventoSorteadoAtualComoCriatura() {
         if (eventoSorteadoAtual instanceof EventoCriatura) {
             return (EventoCriatura) eventoSorteadoAtual;
@@ -93,8 +113,10 @@ public class GerenciadorDeEventos {
         return null;
     }
 
-=======
->>>>>>> f7209b58956d6d2fcbc7f29dfcf96ffd5093dbcd
+    /**
+     * Limpa a referência ao evento sorteado atual.
+     * Pode ser útil após o evento ter sido completamente processado pelo jogo.
+     */
     public void limparEventoSorteadoAtual() {
         this.eventoSorteadoAtual = null;
     }

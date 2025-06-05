@@ -10,78 +10,58 @@ public class ControladorDeTurno {
     private int numeroDoTurno;
     private boolean jogoTerminou;
     private String mensagemFimDeJogo;
-<<<<<<< HEAD
-    private final int TURNOS_PARA_VITORIA_TEMPO = 50;
-=======
 
-    private final int TURNOS_PARA_VITORIA_TEMPO = 10;
->>>>>>> f7209b58956d6d2fcbc7f29dfcf96ffd5093dbcd
+    // Define o número de turnos necessários para alcançar a vitória por tempo.
+    private final int TURNOS_PARA_VITORIA_TEMPO = 10; // Escolhido o valor menor para facilitar testes.
 
+    /**
+     * Construtor do ControladorDeTurno.
+     * @param jogador O personagem do jogador.
+     * @param gerenciadorDeEventos O gerenciador de eventos do jogo.
+     */
     public ControladorDeTurno(Personagem jogador, GerenciadorDeEventos gerenciadorDeEventos) {
         this.jogador = jogador;
         this.gerenciadorDeEventos = gerenciadorDeEventos;
-<<<<<<< HEAD
-        this.numeroDoTurno = 1; //
-=======
-        this.numeroDoTurno = 0;
->>>>>>> f7209b58956d6d2fcbc7f29dfcf96ffd5093dbcd
+        this.numeroDoTurno = 0; // O jogo começa no turno 0, o primeiro turno efetivo será 1.
         this.jogoTerminou = false;
         this.mensagemFimDeJogo = "";
     }
 
-<<<<<<< HEAD
-    public boolean isJogoTerminou() { return jogoTerminou; }
-    public String getMensagemFimDeJogo() { return mensagemFimDeJogo; }
-    public int getNumeroDoTurno() { return numeroDoTurno; }
+    /**
+     * Verifica se o jogo terminou.
+     * @return true se o jogo terminou, false caso contrário.
+     */
+    public boolean isJogoTerminou() {
+        return jogoTerminou;
+    }
 
-    public void forcarFimDeJogo(String mensagem) {
-        if (!this.jogoTerminou) {
+    /**
+     * Obtém a mensagem de fim de jogo.
+     * @return A mensagem final do jogo.
+     */
+    public String getMensagemFimDeJogo() {
+        return mensagemFimDeJogo;
+    }
+
+    /**
+     * Define o estado de fim de jogo e a mensagem correspondente.
+     * @param mensagem A mensagem a ser exibida no fim do jogo.
+     */
+    private void terminarJogo(String mensagem) {
+        if (!this.jogoTerminou) { // Garante que a mensagem de fim de jogo seja definida apenas uma vez.
             this.jogoTerminou = true;
             this.mensagemFimDeJogo = mensagem;
         }
     }
 
-    private void verificarCondicoesDeFimDeJogo() {
-        if (jogoTerminou) return;
-        if (jogador.getVida() <= 0) {
-            forcarFimDeJogo(jogador.getNome() + " não resistiu aos ferimentos.\nFIM DE JOGO - DERROTA");
-        } else if (jogador.getSanidade() <= 0) {
-            forcarFimDeJogo(jogador.getNome() + " perdeu a sanidade para a solidão.\nFIM DE JOGO - DERROTA");
-        } else if (jogador.getFome() <= 0) {
-            forcarFimDeJogo(jogador.getNome() + " sucumbiu à inanição.\nFIM DE JOGO - DERROTA");
-        } else if (jogador.getSede() <= 0) {
-            forcarFimDeJogo(jogador.getNome() + " não resistiu à desidratação.\nFIM DE JOGO - DERROTA");
-        } else if (this.numeroDoTurno > TURNOS_PARA_VITORIA_TEMPO) {
-            forcarFimDeJogo(jogador.getNome() + " sobreviveu por " + TURNOS_PARA_VITORIA_TEMPO + " longos dias!\nFIM DE JOGO - VITÓRIA!");
-        }
-    }
-
-    public String executarProximoTurno() {
-        if (jogoTerminou) return "O jogo já terminou.\n" + mensagemFimDeJogo;
-        this.numeroDoTurno++;
-        String logDoTurno = faseDeManutencao();
-        verificarCondicoesDeFimDeJogo();
-        if(jogoTerminou) {
-            logDoTurno += "\n" + mensagemFimDeJogo;
-        }
-        return logDoTurno;
-=======
-    public boolean isJogoTerminou() {
-        return jogoTerminou;
-    }
-
-    public String getMensagemFimDeJogo() {
-        return mensagemFimDeJogo;
-    }
-
-    private void terminarJogo(String mensagem) {
-        this.jogoTerminou = true;
-        this.mensagemFimDeJogo = mensagem;
-    }
-
+    /**
+     * Verifica as condições de fim de jogo (derrota ou vitória).
+     * Se uma condição de fim for atendida, o jogo é terminado.
+     * @return Uma string com a mensagem de fim de jogo se o jogo terminou nesta verificação, caso contrário, uma string vazia.
+     */
     private String verificarCondicoesDeFimDeJogo() {
-        if (jogoTerminou) { // Se já terminou em uma fase anterior deste turno
-            return "";
+        if (jogoTerminou) { // Se o jogo já terminou em uma fase anterior deste mesmo turno.
+            return this.mensagemFimDeJogo + "\n"; // Retorna a mensagem já definida.
         }
 
         // Condições de Derrota
@@ -93,6 +73,7 @@ public class ControladorDeTurno {
             terminarJogo(jogador.getNome() + " perdeu completamente a sanidade, entregando-se à loucura.\nFIM DE JOGO - DERROTA");
             return this.mensagemFimDeJogo + "\n";
         }
+        // Outras condições de derrota (fome, sede) são verificadas e podem levar à perda de vida na faseDeManutencao.
 
         // Condições de Vitória
         if (this.numeroDoTurno >= TURNOS_PARA_VITORIA_TEMPO) {
@@ -100,9 +81,15 @@ public class ControladorDeTurno {
             return this.mensagemFimDeJogo + "\n";
         }
 
-        return ""; // Continua
+        return ""; // Jogo continua.
     }
 
+    /**
+     * Executa a lógica completa de um próximo turno do jogo.
+     * Inclui fase de início, evento aleatório e manutenção.
+     * Verifica condições de fim de jogo após cada fase crítica.
+     * @return Um log de todas as ocorrências e estados do turno.
+     */
     public String executarProximoTurno() {
         if (jogoTerminou) {
             return "O jogo já terminou.\n" + mensagemFimDeJogo;
@@ -112,92 +99,116 @@ public class ControladorDeTurno {
         StringBuilder logDoTurno = new StringBuilder();
 
         logDoTurno.append("--- INÍCIO DO TURNO ").append(numeroDoTurno).append(" ---\n");
-        logDoTurno.append(faseDeInicio());
+        logDoTurno.append(faseDeInicio()); // Efeitos do ambiente, clima, etc.
 
-        String fimDeJogoAposInicio = verificarCondicoesDeFimDeJogo();
+        String fimDeJogoLog = verificarCondicoesDeFimDeJogo();
         if(jogoTerminou) {
-            logDoTurno.append(fimDeJogoAposInicio);
+            logDoTurno.append(fimDeJogoLog);
             return logDoTurno.toString();
         }
 
-        logDoTurno.append("--- Fase de Ação do Jogador (use os botões de ação) ---\n");
+        // Espaço para ações do jogador, se implementado de forma interativa.
+        // logDoTurno.append("--- Fase de Ação do Jogador (Aguardando entrada do jogador) ---\n");
 
-        logDoTurno.append(faseDeEventoAleatorio());
-        String fimDeJogoAposEvento = verificarCondicoesDeFimDeJogo();
+        logDoTurno.append(faseDeEventoAleatorio()); // Sorteia e executa um evento.
+        fimDeJogoLog = verificarCondicoesDeFimDeJogo();
         if(jogoTerminou) {
-            logDoTurno.append(fimDeJogoAposEvento);
+            logDoTurno.append(fimDeJogoLog);
             return logDoTurno.toString();
         }
 
-        logDoTurno.append(faseDeManutencao());
-        String fimDeJogoAposManutencao = verificarCondicoesDeFimDeJogo();
+        logDoTurno.append(faseDeManutencao()); // Consumo de recursos, fome, sede.
+        fimDeJogoLog = verificarCondicoesDeFimDeJogo();
         if(jogoTerminou) {
-            logDoTurno.append(fimDeJogoAposManutencao);
+            logDoTurno.append(fimDeJogoLog);
         }
 
         logDoTurno.append("--- FIM DO TURNO ").append(numeroDoTurno).append(" ---\n");
         return logDoTurno.toString();
     }
 
+    /**
+     * Lógica para a fase de início do turno.
+     * Pode incluir mudanças climáticas ou efeitos do ambiente.
+     * @return Log da fase de início.
+     */
     private String faseDeInicio() {
         StringBuilder sb = new StringBuilder();
         sb.append("Fase de Início:\n");
         Ambiente ambienteAtual = jogador.getLocalizacaoAtual();
         if (ambienteAtual != null) {
-            String climaMsg = ambienteAtual.modificarClima();
-            sb.append(climaMsg);
-            sb.append("Condições atuais em ").append(ambienteAtual.getNome()).append(": ").append(ambienteAtual.getCondicoesClimaticasPredominantes()).append("\n");
+            // Se houver mecânica de mudança de clima no Ambiente:
+            // String climaMsg = ambienteAtual.modificarClima();
+            // sb.append(climaMsg);
+            sb.append("Condições atuais em ").append(ambienteAtual.getNome())
+                    // .append(": ").append(ambienteAtual.getCondicoesClimaticasPredominantes()) // Se existir tal método
+                    .append(".\n");
+        } else {
+            sb.append("Localização do jogador é desconhecida.\n");
         }
+        // Outras lógicas de início de turno podem ser adicionadas aqui.
         return sb.toString();
     }
 
+    /**
+     * Lógica para a fase de evento aleatório.
+     * Sorteia um evento do GerenciadorDeEventos e o executa.
+     * @return Log da fase de evento.
+     */
     private String faseDeEventoAleatorio() {
         StringBuilder sb = new StringBuilder();
         sb.append("Fase de Evento Aleatório:\n");
-        String resultadoEvento = gerenciadorDeEventos.sortearEExecutarEvento(jogador, jogador.getLocalizacaoAtual(), this.numeroDoTurno);
-        sb.append(resultadoEvento).append("\n");
+        if (gerenciadorDeEventos != null) {
+            String resultadoEvento = gerenciadorDeEventos.sortearEExecutarEvento(jogador, jogador.getLocalizacaoAtual(), this.numeroDoTurno);
+            sb.append(resultadoEvento).append("\n");
+        } else {
+            sb.append("Gerenciador de eventos não está configurado.\n");
+        }
         return sb.toString();
->>>>>>> f7209b58956d6d2fcbc7f29dfcf96ffd5093dbcd
     }
 
+    /**
+     * Lógica para a fase de manutenção do turno.
+     * Inclui perda de fome, sede e possíveis danos por fome/sede críticas.
+     * @return Log da fase de manutenção.
+     */
     private String faseDeManutencao() {
         StringBuilder sb = new StringBuilder();
-<<<<<<< HEAD
-        jogador.setVida(jogador.getVida() - 20);
-        jogador.setFome(jogador.getFome() - 10);
-        jogador.setSede(jogador.getSede() - 10);
-        jogador.setEnergia(jogador.getEnergia() - 10);
-        jogador.setSanidade(jogador.getSanidade() - 10);
-        sb.append("O tempo cobra seu preço...");
-        return sb.toString();
-    }
-=======
         sb.append("Fase de Manutenção:\n");
 
-        int fomePerdida = 5 + (numeroDoTurno / 10);
-        int sedePerdida = 7 + (numeroDoTurno / 8);
-
+        // Lógica de fome
+        int fomePerdida = 5 + (numeroDoTurno / 10); // Fome perdida aumenta com o tempo
         jogador.setFome(Math.max(0, jogador.getFome() - fomePerdida));
-        sb.append(jogador.getNome()).append(" perdeu ").append(fomePerdida).append(" pontos de fome.\n");
-        if (jogador.getFome() == 0 && jogador.getVida() > 0) { // Só aplica dano se estiver vivo
-            int danoFome = 2 + numeroDoTurno / 15;
-            jogador.setVida(jogador.getVida() - danoFome);
-            sb.append("FOME CRÍTICA! ").append(jogador.getNome()).append(" perde ").append(danoFome).append(" de vida.\n");
+        sb.append(jogador.getNome()).append(" perdeu ").append(fomePerdida).append(" pontos de fome. (Fome atual: ").append(jogador.getFome()).append(")\n");
+        if (jogador.getFome() == 0 && jogador.getVida() > 0) {
+            int danoFome = 2 + numeroDoTurno / 15; // Dano por fome aumenta com o tempo
+            jogador.setVida(Math.max(0, jogador.getVida() - danoFome));
+            sb.append("FOME CRÍTICA! ").append(jogador.getNome()).append(" perde ").append(danoFome).append(" de vida. (Vida atual: ").append(jogador.getVida()).append(")\n");
         }
 
+        // Lógica de sede
+        int sedePerdida = 7 + (numeroDoTurno / 8); // Sede perdida aumenta com o tempo
         jogador.setSede(Math.max(0, jogador.getSede() - sedePerdida));
-        sb.append(jogador.getNome()).append(" perdeu ").append(sedePerdida).append(" pontos de sede.\n");
-        if (jogador.getSede() == 0 && jogador.getVida() > 0) { // Só aplica dano se estiver vivo
-            int danoSede = 3 + numeroDoTurno / 12;
-            jogador.setVida(jogador.getVida() - danoSede);
-            sb.append("SEDE CRÍTICA! ").append(jogador.getNome()).append(" perde ").append(danoSede).append(" de vida.\n");
+        sb.append(jogador.getNome()).append(" perdeu ").append(sedePerdida).append(" pontos de sede. (Sede atual: ").append(jogador.getSede()).append(")\n");
+        if (jogador.getSede() == 0 && jogador.getVida() > 0) {
+            int danoSede = 3 + numeroDoTurno / 12; // Dano por sede aumenta com o tempo
+            jogador.setVida(Math.max(0, jogador.getVida() - danoSede));
+            sb.append("SEDE CRÍTICA! ").append(jogador.getNome()).append(" perde ").append(danoSede).append(" de vida. (Vida atual: ").append(jogador.getVida()).append(")\n");
         }
+
+        // Poderia haver também perda de energia ou sanidade base por turno aqui.
+        // jogador.setEnergia(Math.max(0, jogador.getEnergia() - (5 + numeroDoTurno / 20) ));
+        // jogador.setSanidade(Math.max(0, jogador.getSanidade() - (1 + numeroDoTurno / 25) ));
+        // sb.append("O tempo e o cansaço cobram seu preço...\n");
 
         return sb.toString();
     }
 
+    /**
+     * Obtém o número do turno atual.
+     * @return O número do turno.
+     */
     public int getNumeroDoTurno() {
         return numeroDoTurno;
     }
->>>>>>> f7209b58956d6d2fcbc7f29dfcf96ffd5093dbcd
 }

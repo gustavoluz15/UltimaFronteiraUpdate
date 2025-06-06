@@ -1,13 +1,17 @@
 package com.ultimafronteira;
 
-import com.ultimafronteira.events.*;
-import com.ultimafronteira.gamecore.Acao;
+import com.ultimafronteira.events.Evento;
+import com.ultimafronteira.events.EventoCriatura;
+import com.ultimafronteira.events.EventoClimatico;
+import com.ultimafronteira.events.EventoMudancaDeAmbiente;
+import com.ultimafronteira.events.GerenciadorDeEventos;
 import com.ultimafronteira.gamecore.ControladorDeTurno;
 import com.ultimafronteira.model.*;
 import com.ultimafronteira.visual.GameView;
 import com.ultimafronteira.visual.GerenciadorDeImagens;
 import com.ultimafronteira.world.Ambiente;
 import com.ultimafronteira.world.GerenciadorDeAmbientes;
+
 import javafx.animation.PauseTransition;
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -17,16 +21,16 @@ import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
-import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.stage.Stage;
+import javafx.scene.control.DialogPane;
 import javafx.util.Duration;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
-// Removido import desnecessário: import java.util.function.Consumer;
+import java.util.function.Consumer;
 
 public class Main extends Application {
 
@@ -42,32 +46,26 @@ public class Main extends Application {
     private GameView gameView;
     private Stage primaryStage;
 
-    private final int VIDA_BASE_PADRAO = 100; // Aumentado para mais tolerância
-    private final int FOME_BASE_PADRAO = 100;
-    private final int SEDE_BASE_PADRAO = 100;
-    private final int ENERGIA_BASE_PADRAO = 100;
-    private final int SANIDADE_BASE_PADRAO = 80;
-    private final double PESO_INV_PADRAO = 25.0;
+    private final int VIDA_BASE_PADRAO = 85;
+    private final int FOME_BASE_PADRAO = 75;
+    private final int SEDE_BASE_PADRAO = 75;
+    private final int ENERGIA_BASE_PADRAO = 90;
+    private final int SANIDADE_BASE_PADRAO = 60;
+    private final double PESO_INV_PADRAO = 20.0;
+
 
     @Override
     public void start(Stage primaryStage) {
         try {
             this.primaryStage = primaryStage;
-            GerenciadorDeImagens.carregarImagens(); // Carrega as imagens uma vez
+            GerenciadorDeImagens.carregarImagens();
             primaryStage.setTitle("Última Fronteira - Criação de Personagem");
             mostrarCenaCriacaoPersonagem();
         } catch (Throwable t) {
             System.err.println("!!! ERRO FATAL DURANTE A INICIALIZAÇÃO !!!");
             t.printStackTrace();
-        }
-    }
-
-    private void reiniciarAplicacao() {
-        Main novaInstancia = new Main();
-        try {
-            novaInstancia.start(this.primaryStage);
-        } catch (Exception e) {
-            e.printStackTrace();
+            mostrarAlerta("Erro Crítico", "Ocorreu um erro fatal ao iniciar o jogo: " + t.getMessage());
+            Platform.exit();
         }
     }
 
@@ -81,7 +79,7 @@ public class Main extends Application {
         HBox nomeBox = new HBox(10);
         nomeBox.setAlignment(Pos.CENTER_LEFT);
         Label lblNome = new Label("Nome:");
-        TextField txtNome = new TextField("Aventureiro");
+        TextField txtNome = new TextField("Nome do Personagem");
         txtNome.setPromptText("Digite o nome");
         txtNome.setPrefWidth(200);
         nomeBox.getChildren().addAll(lblNome, txtNome);
@@ -90,7 +88,7 @@ public class Main extends Application {
         Label lblClasse = new Label("Classe:");
         ComboBox<ClassePersonagem> cbClasse = new ComboBox<>();
         cbClasse.getItems().addAll(ClassePersonagem.values());
-        cbClasse.setValue(ClassePersonagem.SOBREVIVENTE_NATO);
+        cbClasse.setValue(ClassePersonagem.MECANICO);
         classeBox.getChildren().addAll(lblClasse, cbClasse);
         VBox detalhesClasseBox = new VBox(10);
         detalhesClasseBox.setPadding(new Insets(10, 0, 10, 0));
@@ -113,8 +111,8 @@ public class Main extends Application {
         btnIniciarJogo.setOnAction(e -> {
             String nomeJogador = txtNome.getText();
             ClassePersonagem classeEscolhida = cbClasse.getValue();
-            if (nomeJogador == null || nomeJogador.trim().isEmpty()) {
-                mostrarAlerta("Nome Inválido", "Por favor, digite um nome para o seu personagem.");
+            if (nomeJogador == null || nomeJogador.trim().isEmpty() || nomeJogador.equals("Nome do Personagem")) {
+                mostrarAlerta("Nome Inválido", "Por favor, digite um nome válido para o seu personagem.");
                 return;
             }
             if (classeEscolhida == null) {
@@ -133,289 +131,369 @@ public class Main extends Application {
     private void iniciarJogoPrincipal(String nomeJogador, ClassePersonagem classeEscolhida) {
         gerenciadorDeAmbientes = new GerenciadorDeAmbientes();
         Ambiente ambienteInicial = gerenciadorDeAmbientes.getAmbientePorNome("Floresta dos Sussurros");
-        if (ambienteInicial == null) { // Fallback caso o ambiente padrão não seja encontrado
-            ambienteInicial = gerenciadorDeAmbientes.getTodosAmbientes().stream().findFirst().orElse(null);
-            if (ambienteInicial == null) {
-                mostrarAlerta("Erro Crítico", "Nenhum ambiente inicial pôde ser carregado. O jogo não pode começar.");
-                return;
-            }
+        if (ambienteInicial == null && !gerenciadorDeAmbientes.getTodosAmbientes().isEmpty()) {
+            ambienteInicial = gerenciadorDeAmbientes.getTodosAmbientes().get(0);
+        } else if (ambienteInicial == null) {
+            mostrarAlerta("Erro Crítico", "Não foi possível carregar os ambientes do jogo.");
+            Platform.exit();
+            return;
         }
 
-        String chaveImagemPersonagem = "personagem_sobrevivente"; // Padrão
+        String chaveImagemPersonagem = "personagem_sobrevivente";
         switch (classeEscolhida) {
             case MECANICO: chaveImagemPersonagem = "personagem_mecanico"; break;
             case MEDICO: chaveImagemPersonagem = "personagem_medico"; break;
             case RASTREADOR: chaveImagemPersonagem = "personagem_rastreador"; break;
-            case SOBREVIVENTE_NATO: chaveImagemPersonagem = "personagem_sobrevivente"; break;
         }
 
         jogador = new Personagem(nomeJogador, classeEscolhida, VIDA_BASE_PADRAO, FOME_BASE_PADRAO, SEDE_BASE_PADRAO, ENERGIA_BASE_PADRAO, SANIDADE_BASE_PADRAO, ambienteInicial, PESO_INV_PADRAO, chaveImagemPersonagem);
         gerenciadorDeEventos = new GerenciadorDeEventos();
         controladorDeTurno = new ControladorDeTurno(jogador, gerenciadorDeEventos);
-        gameView = new GameView(this::processarUsoDeItem);
+        eventoClimaticoAtivo = null;
+        emConfronto = false;
+        eventoConfrontoAtual = null;
 
-        gameView.getBtnExplorar().setOnAction(e -> processarAcaoDoControlador(Acao.EXPLORAR));
-        gameView.getBtnDescansar().setOnAction(e -> processarAcaoDoControlador(Acao.DESCANSAR));
-        gameView.getBtnProximoTurno().setOnAction(e -> processarAcaoDoControlador(Acao.AVANCAR_TURNO));
-        gameView.getBtnNovoJogo().setOnAction(e -> reiniciarAplicacao());
+        gameView = new GameView(this::processarUsoDeItemInventario);
+
+        gameView.getBtnExplorar().setOnAction(e -> executarAcaoPrincipal(this::processarExploracao, false));
+        gameView.getBtnProximoTurno().setOnAction(e -> executarAcaoPrincipal(this::processarProximoTurno, true));
+        gameView.getBtnDescansar().setOnAction(e -> executarAcaoPrincipal(this::processarDescanso, true));
+        gameView.getBtnNovoJogo().setOnAction(e -> mostrarCenaCriacaoPersonagem());
 
         primaryStage.setTitle("Última Fronteira");
         primaryStage.setScene(gameView.getScene());
         primaryStage.centerOnScreen();
-        gameView.appendOutput("Bem-vindo ao Última Fronteira, " + jogador.getNome() + "!\n");
+
+        exibirMensagem("Bem-vindo ao Última Fronteira, " + jogador.getNome() + "!");
         atualizarTodaUI();
+        gameView.habilitarAcoes();
     }
 
-    private void processarAcaoDoControlador(Acao acao) {
-        if (emConfronto || (controladorDeTurno != null && controladorDeTurno.isJogoTerminou())) return;
+    private void atualizarTodaUI() {
+        if (gameView == null || jogador == null || controladorDeTurno == null) return;
+        EventoCriatura inimigoParaDesenhar = emConfronto ? eventoConfrontoAtual : null;
+        Ambiente ambienteParaDesenhar = jogador.getLocalizacaoAtual();
+        EventoClimatico climaParaDesenhar = eventoClimaticoAtivo;
 
-        gameView.limparLog(); // Limpa o log antes de adicionar novas mensagens
-        String resultadoDoTurno = controladorDeTurno.executarAcaoDoJogador(acao);
-        gameView.appendOutput(resultadoDoTurno);
+        gameView.getCenaPane().desenharCena(jogador, inimigoParaDesenhar, ambienteParaDesenhar, climaParaDesenhar);
+        gameView.atualizarInventario(jogador.getInventario());
+        atualizarBotoesDeMovimento();
+        gameView.atualizarTurno(controladorDeTurno.getNumeroDoTurno());
+        if(ambienteParaDesenhar != null) {
+            gameView.atualizarAmbienteAtual(ambienteParaDesenhar.getNome());
+        }
 
-        verificarEventosPosAcao(); // Renomeado para clareza
+        if (emConfronto && eventoConfrontoAtual != null && jogador.getVida() > 0 && eventoConfrontoAtual.getVidaAtualCriatura() > 0) {
+            gameView.mostrarControlesCombate(
+                    "Confronto com " + eventoConfrontoAtual.getTipoDeCriatura() + " (PV: " + eventoConfrontoAtual.getVidaAtualCriatura() + ")",
+                    this::processarAcaoCombate
+            );
+        } else {
+            gameView.esconderControlesCombate();
+        }
+    }
 
+    private void executarAcaoPrincipal(Runnable acao, boolean podeExecutarCansado) {
+        if (emConfronto) {
+            exibirMensagem("Você está em confronto! Resolva-o primeiro.");
+            return;
+        }
         if (controladorDeTurno.isJogoTerminou()) {
+            exibirMensagem("O jogo já terminou.");
+            return;
+        }
+
+        if (jogador.getEnergia() <= 0 && !podeExecutarCansado) {
+            exibirMensagem("Você está exausto demais para isso.", "Precisa descansar ou usar um item de energia.");
+            return;
+        }
+
+        acao.run();
+
+        if (jogador.getEnergia() <= 0) {
+            exibirMensagem("Sua energia acabou! Você precisa descansar.");
+        }
+
+        if (controladorDeTurno.isJogoTerminou() && !emConfronto) {
             finalizarJogo();
-        } else if (!emConfronto) {
+        }
+    }
+
+    private void processarProximoTurno() {
+        jogador.setVida(jogador.getVida() - 15);
+        exibirMensagem("Avançar o tempo de forma imprudente tem seus custos... Você perde 15 de vida.");
+        if (jogador.getVida() <= 0) {
+            controladorDeTurno.forcarFimDeJogo("Seu corpo não aguentou o esforço de continuar sem um plano.");
+            finalizarJogo();
+            return;
+        }
+
+        String logDoTurno = controladorDeTurno.executarProximoTurno();
+        gameView.appendOutput(logDoTurno); // Log detalhado vai para o Diário
+        verificarEventosEEntrarEmConfrontoSeNecessario();
+        if (!emConfronto) {
             atualizarTodaUI();
         }
     }
 
-    private void atualizarTodaUI() {
-        if (gameView == null || jogador == null) return;
-        EventoCriatura inimigo = emConfronto ? eventoConfrontoAtual : null;
-        // Garante que o ambiente atual do jogador é usado para desenhar
-        Ambiente ambienteParaDesenhar = jogador.getLocalizacaoAtual();
-        if (ambienteParaDesenhar == null && gerenciadorDeAmbientes != null) { // Fallback se o jogador não tiver localização
-            ambienteParaDesenhar = gerenciadorDeAmbientes.getAmbienteGlobalPadrao();
+    private void processarExploracao() {
+        String resultadoExploracao = jogador.explorarAmbiente(gerenciadorDeEventos, controladorDeTurno.getNumeroDoTurno());
+        gameView.appendOutput(resultadoExploracao);
+        verificarEventosEEntrarEmConfrontoSeNecessario();
+        if (!emConfronto) {
+            atualizarTodaUI();
         }
-
-        gameView.getCenaPane().desenharCena(jogador, inimigo, ambienteParaDesenhar, eventoClimaticoAtivo);
-        gameView.atualizarInventario(jogador.getInventario());
-        atualizarBotoesDeMovimento();
-        if(controladorDeTurno != null) gameView.atualizarTurno(controladorDeTurno.getNumeroDoTurno());
-        if(ambienteParaDesenhar != null) gameView.atualizarAmbienteAtual(ambienteParaDesenhar.getNome());
     }
 
-    private void processarUsoDeItem(Item item) {
-        if (item == null || (emConfronto && !(item instanceof Remedio || item instanceof Arma))) {
-            exibirMensagem("Você não pode usar '" + (item != null ? item.getNome() : "") + "' agora.");
-            return;
+    private void processarDescanso() {
+        int energiaRecuperada = 30 + random.nextInt(11);
+        int fomeConsumida = 10;
+        int sedeConsumida = 10;
+        jogador.setEnergia(jogador.getEnergia() + energiaRecuperada);
+        jogador.setFome(Math.max(0, jogador.getFome() - fomeConsumida));
+        jogador.setSede(Math.max(0, jogador.getSede() - sedeConsumida));
+        exibirMensagem("Você descansa um pouco...", "Energia recuperada: +" + energiaRecuperada, "Fome e Sede alteradas: -" + fomeConsumida);
+
+        controladorDeTurno.verificarCondicoesDeFimDeJogo();
+
+        if(controladorDeTurno.isJogoTerminou()) {
+            finalizarJogo();
+        } else {
+            processarProximoTurno(); // Descansar também avança para o próximo dia
         }
-        item.usar(jogador);
-        gameView.appendOutput("Você usou: " + item.getNome() + "\n");
-        if (item.getDurabilidade() == 1 && !(item instanceof Arma)) { // Armas não são consumidas no uso
+    }
+
+    private void processarUsoDeItemInventario(Item item) {
+        if (item == null || controladorDeTurno.isJogoTerminou()) return;
+
+        String resultadoUso = item.usar(jogador);
+        exibirMensagem("Você usou: " + item.getNome(), resultadoUso);
+
+        if (item.getDurabilidade() <= 1 && !(item instanceof Arma || item instanceof Escudo)) {
             jogador.getInventario().removerItem(item.getNome());
         }
+
         atualizarTodaUI();
+
+        if (emConfronto) {
+            if (jogador.getVida() <= 0) {
+                controladorDeTurno.forcarFimDeJogo(jogador.getNome() + " sucumbiu ao usar " + item.getNome() + ".");
+                finalizarJogo();
+                return;
+            }
+            if (!(item instanceof Arma || item instanceof Escudo)) {
+                acaoDaCriaturaNoCombate();
+            }
+        }
     }
 
     private void processarMovimento(Ambiente destino) {
-        if (emConfronto || (controladorDeTurno != null && controladorDeTurno.isJogoTerminou())) return;
-
-        gameView.limparLog();
         int custoEnergia = 15;
+        if (jogador.temHabilidade("Movimentação Silenciosa")) custoEnergia -= 5;
+        custoEnergia = Math.max(5, custoEnergia);
+
         if (jogador.getEnergia() >= custoEnergia) {
             jogador.setEnergia(jogador.getEnergia() - custoEnergia);
-
-            // CORREÇÃO: Usando a assinatura correta do método
             gerenciadorDeAmbientes.mudarAmbienteAtualDoJogador(jogador, destino.getNome());
-
-            gameView.appendOutput("Você viajou para " + destino.getNome() + ".\n");
-
+            exibirMensagem("Você viajou para " + destino.getNome() + ".", "Energia gasta: " + custoEnergia);
             String resultadoEvento = gerenciadorDeEventos.sortearEExecutarEvento(jogador, destino, controladorDeTurno.getNumeroDoTurno());
             gameView.appendOutput(resultadoEvento);
-
-            verificarEventosPosAcao();
+            verificarEventosEEntrarEmConfrontoSeNecessario();
             if (!emConfronto) {
                 atualizarTodaUI();
             }
         } else {
-            exibirMensagem("Energia insuficiente para viajar.");
-            atualizarTodaUI(); // Atualiza a UI mesmo se a viagem falhar
+            exibirMensagem("Energia insuficiente para viajar ("+jogador.getEnergia()+"/"+custoEnergia+").");
         }
     }
 
     private void atualizarBotoesDeMovimento() {
         if (gameView == null || gerenciadorDeAmbientes == null || jogador == null || jogador.getLocalizacaoAtual() == null) return;
         List<Ambiente> destinos = gerenciadorDeAmbientes.getAmbientesAdjacentes(jogador.getLocalizacaoAtual().getNome());
-        gameView.atualizarPainelMovimento(destinos, this::processarMovimento, emConfronto);
+        boolean desabilitarMovimento = emConfronto || controladorDeTurno.isJogoTerminou() || jogador.getEnergia() <= 0;
+        gameView.atualizarPainelMovimento(destinos, this::processarMovimento, desabilitarMovimento);
     }
 
-    private void verificarEventosPosAcao() { // Renomeado e lógica ajustada
+    private void verificarEventosEEntrarEmConfrontoSeNecessario() {
         Evento eventoSorteado = gerenciadorDeEventos.getEventoSorteadoAtual();
-        if (eventoSorteado != null) {
-            if (eventoSorteado instanceof EventoCriatura) {
-                this.eventoConfrontoAtual = (EventoCriatura) eventoSorteado;
-                entrarModoConfronto();
-            } else if (eventoSorteado instanceof EventoClimatico) {
-                this.eventoClimaticoAtivo = (EventoClimatico) eventoSorteado;
-                // A mensagem do evento climático já é dada pelo evento.executar()
-                atualizarTodaUI(); // Atualiza para mostrar mudança de clima
+        if (eventoSorteado instanceof EventoCriatura) {
+            this.eventoConfrontoAtual = (EventoCriatura) eventoSorteado;
+            entrarModoConfronto();
+        } else if (eventoSorteado instanceof EventoMudancaDeAmbiente) {
+            EventoMudancaDeAmbiente evtMudanca = (EventoMudancaDeAmbiente) eventoSorteado;
+            gerenciadorDeAmbientes.mudarAmbienteAtualDoJogador(jogador, evtMudanca.getNovoAmbiente().getNome());
+            exibirMensagem(evtMudanca.getDescricao(), "Você agora está em " + evtMudanca.getNovoAmbiente().getNome() + ".");
+            gerenciadorDeEventos.limparEventoSorteadoAtual();
+            atualizarTodaUI();
+        } else if (eventoSorteado != null) {
+            if (eventoSorteado instanceof EventoClimatico) {
+                if (this.eventoClimaticoAtivo == null || this.eventoClimaticoAtivo.getDuracao() <= 0) {
+                    this.eventoClimaticoAtivo = (EventoClimatico) eventoSorteado;
+                }
             }
-            // Eventos de Descoberta e DoencaFerimento já exibem suas mensagens via executar()
-            // e não precisam de tratamento especial aqui, a menos que alterem estado que exija UI imediata.
-            gerenciadorDeEventos.limparEventoSorteadoAtual(); // Limpa após processar
+            gerenciadorDeEventos.limparEventoSorteadoAtual();
         }
     }
 
     private void entrarModoConfronto() {
         this.emConfronto = true;
-        gameView.limparLegenda();
-        atualizarTodaUI(); // Desenha o inimigo
-        gameView.mostrarControlesCombate(
-                "Um " + eventoConfrontoAtual.getTipoDeCriatura() + " selvagem aparece!",
-                this::processarAcaoCombate
-        );
-    }
-
-    private void sairModoConfronto(String mensagem) {
-        gameView.exibirMensagem(mensagem);
-        gameView.esconderControlesCombate();
-        emConfronto = false;
-        eventoConfrontoAtual = null;
-        gerenciadorDeEventos.limparEventoSorteadoAtual();
+        exibirMensagem("CONFRONTO COM " + eventoConfrontoAtual.getTipoDeCriatura().toUpperCase() + "!");
         atualizarTodaUI();
     }
 
+    private void sairModoConfronto(String mensagem) {
+        emConfronto = false;
+        String nomeCriaturaAnterior = (eventoConfrontoAtual != null) ? eventoConfrontoAtual.getTipoDeCriatura() : "um inimigo";
+        eventoConfrontoAtual = null;
+        gerenciadorDeEventos.limparEventoSorteadoAtual();
+
+        exibirMensagem(mensagem, ">>> CONFRONTO COM " + nomeCriaturaAnterior + " TERMINADO <<<");
+
+        atualizarTodaUI();
+
+        if (controladorDeTurno.isJogoTerminou()) {
+            finalizarJogo();
+        }
+    }
+
     private void processarAcaoCombate(String acao) {
-        if (!emConfronto) return;
-        gameView.limparLegenda();
-        if (acao.equals("lutar")) {
+        if (!emConfronto || eventoConfrontoAtual == null || jogador.getVida() <= 0) return;
+
+        if ("lutar".equalsIgnoreCase(acao)) {
             processarLuta();
-        } else if (acao.equals("fugir")) {
+        } else if ("fugir".equalsIgnoreCase(acao)) {
             processarFuga();
         }
     }
 
     private void processarLuta() {
-        if (!emConfronto || eventoConfrontoAtual == null) return;
-        gameView.setControlesCombateDesabilitado(true);
+        int danoBase = jogador.calcularDanoBase();
+        int danoBonus = jogador.consumirBuffDano();
+        int danoTotal = danoBase + danoBonus;
 
-        int danoJogador = jogador.calcularDanoBase();
-        eventoConfrontoAtual.receberDano(danoJogador);
-        exibirMensagem(jogador.getNome() + " ataca!", "A criatura sofre " + danoJogador + " de dano.");
+        String logAtaqueJogador = eventoConfrontoAtual.receberDano(danoTotal);
+        String msgBonus = danoBonus > 0 ? "Você usa o bônus e ataca com força extra!" : jogador.getNome() + " ataca!";
+        exibirMensagem(msgBonus, logAtaqueJogador);
+
         atualizarTodaUI();
 
         if (eventoConfrontoAtual.getVidaAtualCriatura() <= 0) {
-            PauseTransition vitoriaDelay = new PauseTransition(Duration.seconds(1.5));
-            vitoriaDelay.setOnFinished(e -> sairModoConfronto("Você venceu o combate!"));
-            vitoriaDelay.play();
+            sairModoConfronto("Você venceu o combate contra " + eventoConfrontoAtual.getTipoDeCriatura() + "!");
             return;
         }
-
-        PauseTransition delayAtaqueInimigo = new PauseTransition(Duration.seconds(1.5));
-        delayAtaqueInimigo.setOnFinished(event -> {
-            try {
-                if (!emConfronto) return; // Verifica se o combate ainda está ativo
-                int danoCriatura = eventoConfrontoAtual.calcularDanoEfetivoCriatura(controladorDeTurno.getNumeroDoTurno());
-                jogador.setVida(jogador.getVida() - danoCriatura);
-                exibirMensagem("O inimigo revida!", "Você sofre " + danoCriatura + " de dano.");
-                atualizarTodaUI();
-
-                if (jogador.getVida() <= 0) {
-                    controladorDeTurno.forcarFimDeJogo("DERROTA\n" + jogador.getNome() + " foi derrotado em combate.");
-                    finalizarJogo();
-                } else {
-                    gameView.setControlesCombateDesabilitado(false);
-                }
-            } catch (Exception e) {
-                System.err.println("### ERRO INESPERADO NO COMBATE ###");
-                e.printStackTrace();
-            }
-        });
-        delayAtaqueInimigo.play();
+        acaoDaCriaturaNoCombate();
     }
 
     private void processarFuga() {
-        if (!emConfronto || eventoConfrontoAtual == null) return;
-        gameView.setControlesCombateDesabilitado(true);
-        exibirMensagem("Você tenta fugir...");
+        exibirMensagem(jogador.getNome() + " tenta fugir...");
+        double chanceDeFuga = 0.5;
+        if (jogador.temHabilidade("Movimentação Silenciosa")) {
+            chanceDeFuga += 0.25;
+        }
 
-        PauseTransition delayFuga = new PauseTransition(Duration.seconds(1.5));
-        delayFuga.setOnFinished(event -> {
-            if (random.nextDouble() < 0.5) {
-                sairModoConfronto("Você conseguiu escapar!");
-            } else {
-                if (!emConfronto) return;
-                int danoCriatura = eventoConfrontoAtual.calcularDanoEfetivoCriatura(controladorDeTurno.getNumeroDoTurno());
-                jogador.setVida(jogador.getVida() - danoCriatura);
-                exibirMensagem("A fuga falhou!", "Você sofre " + danoCriatura + " de dano.");
-                atualizarTodaUI();
+        if (random.nextDouble() < chanceDeFuga) {
+            sairModoConfronto("Você conseguiu escapar!");
+        } else {
+            exibirMensagem("A fuga falhou!");
+            acaoDaCriaturaNoCombate();
+        }
+    }
 
-                if (jogador.getVida() <= 0) {
-                    controladorDeTurno.forcarFimDeJogo("DERROTA\n" + jogador.getNome() + " foi derrotado ao tentar fugir.");
-                    finalizarJogo();
-                } else {
-                    gameView.setControlesCombateDesabilitado(false);
-                }
-            }
-        });
-        delayFuga.play();
+    private void acaoDaCriaturaNoCombate() {
+        if (eventoConfrontoAtual == null || eventoConfrontoAtual.getVidaAtualCriatura() <= 0 || jogador.getVida() <= 0) {
+            return;
+        }
+        int danoCriatura = eventoConfrontoAtual.calcularDanoEfetivoCriatura(controladorDeTurno.getNumeroDoTurno());
+        int danoFinalRecebido = danoCriatura;
+
+        if(jogador.isBuffDefesaAtivo()) {
+            int reducao = jogador.consumirBuffDefesa();
+            danoFinalRecebido = Math.max(0, danoCriatura - reducao);
+            exibirMensagem("Você se defende e absorve " + reducao + " de dano!");
+        }
+
+        jogador.setVida(jogador.getVida() - danoFinalRecebido);
+        exibirMensagem("O " + eventoConfrontoAtual.getTipoDeCriatura() + " revida!", "Você sofreu " + danoFinalRecebido + " de dano.");
+
+        atualizarTodaUI();
+
+        if (jogador.getVida() <= 0) {
+            controladorDeTurno.forcarFimDeJogo(jogador.getNome() + " foi derrotado em combate.");
+            finalizarJogo();
+        } else {
+            gameView.exibirLegenda("Sua vez. O " + eventoConfrontoAtual.getTipoDeCriatura() + " tem " + eventoConfrontoAtual.getVidaAtualCriatura() + " PV.");
+        }
     }
 
     private void exibirMensagem(String... mensagens) {
-        gameView.exibirMensagem(mensagens);
+        if (gameView != null) gameView.exibirMensagem(mensagens);
     }
 
     private void finalizarJogo() {
-        gameView.desabilitarAcoes();
+        if(gameView != null) gameView.desabilitarAcoes();
         if (emConfronto) {
-            // Não precisa exibir mensagem aqui, o popup cuidará disso.
-            // Apenas garante que saia do modo de confronto.
-            gameView.esconderControlesCombate();
             emConfronto = false;
-            eventoConfrontoAtual = null;
-            gerenciadorDeEventos.limparEventoSorteadoAtual();
+            gameView.esconderControlesCombate();
         }
+
+        atualizarTodaUI();
+
         String mensagemFinal = controladorDeTurno.getMensagemFimDeJogo();
-        Platform.runLater(() -> {
-            if (mensagemFinal.contains("VITÓRIA")) {
-                mostrarPopupDeVitoria(mensagemFinal);
+        if (mensagemFinal == null || mensagemFinal.isEmpty()) {
+            mensagemFinal = (jogador != null && jogador.getVida() <= 0) ? jogador.getNome() + " não sobreviveu." : "O jogo terminou.";
+        }
+
+        exibirMensagem("--- FIM DE JOGO ---", mensagemFinal);
+
+        final String conteudoPopup = mensagemFinal;
+        PauseTransition delay = new PauseTransition(Duration.seconds(2.0));
+        delay.setOnFinished(event -> {
+            if (conteudoPopup.contains("VITÓRIA")) {
+                mostrarPopupDeVitoria(conteudoPopup);
             } else {
-                mostrarPopupDeDerrota(mensagemFinal);
+                mostrarPopupDeDerrota(conteudoPopup);
             }
         });
+        delay.play();
     }
 
     private void mostrarPopupDeDerrota(String conteudo) {
-        Alert alert = new Alert(Alert.AlertType.NONE);
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle("Fim de Jogo");
-        alert.setHeaderText("Você Morreu!"); // Simplificado
-        alert.setContentText(conteudo.replace("FIM DE JOGO - DERROTA\n", "").trim());
+        alert.setHeaderText("VOCÊ MORREU!");
         DialogPane dialogPane = alert.getDialogPane();
-        dialogPane.setStyle("-fx-background-color: #5B2C2C; -fx-border-color: #a04040;");
+        dialogPane.setStyle("-fx-background-color: #5B2C2C;");
         Label headerLabel = (Label) dialogPane.lookup(".header-panel .label");
-        headerLabel.setStyle("-fx-text-fill: #FFA0A0; -fx-font-weight: bold; -fx-font-size: 1.5em;");
-        dialogPane.lookupAll(".content.label").forEach(l -> ((Label)l).setTextFill(Color.WHITE));
-        alert.getButtonTypes().add(ButtonType.OK);
+        if(headerLabel != null) headerLabel.setStyle("-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #ff8080;");
+        alert.setContentText(conteudo.replace("FIM DE JOGO - DERROTA", "").trim());
+        Label contentLabel = (Label) dialogPane.lookup(".content.label");
+        if(contentLabel != null) contentLabel.setStyle("-fx-text-fill: white;");
+        alert.getButtonTypes().setAll(ButtonType.OK);
         alert.showAndWait();
     }
 
     private void mostrarPopupDeVitoria(String conteudo) {
-        Alert alert = new Alert(Alert.AlertType.NONE);
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle("Fim de Jogo");
-        alert.setHeaderText("Parabéns, Você Venceu!"); // Simplificado
-        alert.setContentText(conteudo.replace("FIM DE JOGO - VITÓRIA!\n", "").trim());
+        alert.setHeaderText("PARABÉNS, VOCÊ SOBREVIVEU!");
         DialogPane dialogPane = alert.getDialogPane();
-        dialogPane.setStyle("-fx-background-color: #2C5B2C; -fx-border-color: #40a040;");
+        dialogPane.setStyle("-fx-background-color: #2C5B2C;");
         Label headerLabel = (Label) dialogPane.lookup(".header-panel .label");
-        headerLabel.setStyle("-fx-text-fill: #A0FFA0; -fx-font-weight: bold; -fx-font-size: 1.5em;");
-        dialogPane.lookupAll(".content.label").forEach(l -> ((Label)l).setTextFill(Color.WHITE));
-        alert.getButtonTypes().add(ButtonType.OK);
+        if(headerLabel != null) headerLabel.setStyle("-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #80ff80;");
+        alert.setContentText(conteudo.replace("FIM DE JOGO - VITÓRIA!", "").trim());
+        Label contentLabel = (Label) dialogPane.lookup(".content.label");
+        if(contentLabel != null) contentLabel.setStyle("-fx-text-fill: white;");
+        alert.getButtonTypes().setAll(ButtonType.OK);
         alert.showAndWait();
     }
 
     private void exibirDetalhesDaClasseSelecionada(ClassePersonagem classe, Label lblDescricao, Label lblAtributos) {
-        if (classe == null) return;
-        lblDescricao.setText(classe.getDescricao());
-        StringBuilder atributosStr = new StringBuilder();
-        int vidaPreview = VIDA_BASE_PADRAO, energiaPreview = ENERGIA_BASE_PADRAO, sanidadePreview = SANIDADE_BASE_PADRAO, fomePreview = FOME_BASE_PADRAO, sedePreview = SEDE_BASE_PADRAO;
+        if (classe == null) return; lblDescricao.setText(classe.getDescricao()); StringBuilder atributosStr = new StringBuilder();
+        int vidaPreview = VIDA_BASE_PADRAO; int energiaPreview = ENERGIA_BASE_PADRAO; int sanidadePreview = SANIDADE_BASE_PADRAO; int fomePreview = FOME_BASE_PADRAO; int sedePreview = SEDE_BASE_PADRAO;
         List<String> habilidadesPreview = new ArrayList<>();
         switch (classe) {
             case RASTREADOR: fomePreview += 15; sedePreview += 10; habilidadesPreview.add("Rastreamento Aguçado"); habilidadesPreview.add("Conhecimento da Flora e Fauna"); habilidadesPreview.add("Movimentação Silenciosa"); atributosStr.append(String.format("Fome Inicial: ~%d\nSede Inicial: ~%d\n", fomePreview, sedePreview)); break;
-            case MECANICO: energiaPreview += 10; habilidadesPreview.add("Engenhosidade"); habilidadesPreview.add("Fabricar Ferramentas Básicas"); habilidadesPreview.add("Desmontar Sucata"); atributosStr.append(String.format("Energia Inicial: ~%d\n", energiaPreview)); break;
+            case MECANICO: energiaPreview += 10; vidaPreview += 5; habilidadesPreview.add("Engenhosidade"); habilidadesPreview.add("Fabricar Ferramentas Básicas"); habilidadesPreview.add("Desmontar Sucata"); atributosStr.append(String.format("Vida Inicial: ~%d\nEnergia Inicial: ~%d\n", vidaPreview, energiaPreview)); break;
             case MEDICO: sanidadePreview += 10; vidaPreview += 5; habilidadesPreview.add("Primeiros Socorros Avançados"); habilidadesPreview.add("Conhecimento de Ervas Medicinais"); habilidadesPreview.add("Resistência a Doenças Leves"); atributosStr.append(String.format("Sanidade Inicial: ~%d\nVida Inicial: ~%d\n", sanidadePreview, vidaPreview)); break;
             case SOBREVIVENTE_NATO: vidaPreview += 15; fomePreview += 25; sedePreview += 25; energiaPreview += 5; habilidadesPreview.add("Metabolismo Eficiente"); habilidadesPreview.add("Resiliência Climática"); habilidadesPreview.add("Instinto de Perigo"); atributosStr.append(String.format("Vida: ~%d\nFome: ~%d\nSede: ~%d\nEnergia: ~%d\n", vidaPreview, fomePreview, sedePreview, energiaPreview)); break;
         }

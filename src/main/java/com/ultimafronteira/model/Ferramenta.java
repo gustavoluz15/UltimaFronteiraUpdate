@@ -10,26 +10,23 @@ public class Ferramenta extends Item {
         this.eficiencia = eficiencia;
     }
 
-    public String getTipo() {
-        return tipo;
-    }
-
-    public int getEficiencia() {
-        return eficiencia;
-    }
+    public String getTipo() { return tipo; }
+    public int getEficiencia() { return eficiencia; }
 
     @Override
-    public void usar(Personagem jogador) {
+    public String usar(Personagem jogador) {
+        StringBuilder sb = new StringBuilder();
         if (getDurabilidade() > 0 || getDurabilidade() == -1) {
-            System.out.println(jogador.getNome() + " usou a ferramenta: " + getNome() + " (" + tipo + ")");
+            sb.append(jogador.getNome()).append(" usou a ferramenta: ").append(getNome());
             if (getDurabilidade() != -1) {
-                setDurabilidade(getDurabilidade() -1);
+                setDurabilidade(getDurabilidade() - 1);
                 if (getDurabilidade() == 0) {
-                    System.out.println(getNome() + " quebrou!");
+                    sb.append("\nA ferramenta ").append(getNome()).append(" quebrou!");
                 }
             }
         } else {
-            System.out.println(getNome() + " está quebrado(a) e não pode ser usado(a).");
+            sb.append(getNome()).append(" está quebrada.");
         }
+        return sb.toString();
     }
 }

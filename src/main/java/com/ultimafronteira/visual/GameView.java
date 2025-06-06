@@ -3,11 +3,13 @@ package com.ultimafronteira.visual;
 import com.ultimafronteira.model.Inventario;
 import com.ultimafronteira.model.Item;
 import com.ultimafronteira.world.Ambiente;
+import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.Tooltip;
 import javafx.scene.image.ImageView;
@@ -19,6 +21,7 @@ import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
+import javafx.scene.text.Text;
 import java.util.List;
 import java.util.function.Consumer;
 
@@ -26,15 +29,16 @@ public class GameView {
 
     private BorderPane root;
     private CenaPane cenaPane;
-    private TextArea outputArea;
+    private TextArea outputArea; // Diário de Bordo
     private PainelInventario painelInventario;
     private VBox listaDeAdjacentes;
+    private FlowPane painelAcoesPrincipais;
     private Button btnExplorar, btnDescansar, btnProximoTurno, btnNovoJogo;
     private Label turnoLabel;
     private Label ambienteAtualLabel;
     private VBox legendaPanel;
     private Label combateMensagemTopo;
-    private HBox painelAcoesCombate; // Variável de classe para o painel de combate
+    private HBox painelAcoesCombate;
     private Button btnLutar;
     private Button btnFugir;
     private final int THUMBNAIL_SIZE = 80;
@@ -62,28 +66,30 @@ public class GameView {
         combateMensagemTopo = new Label();
         combateMensagemTopo.setFont(Font.font("Arial", FontWeight.BOLD, 28));
         combateMensagemTopo.setTextFill(Color.WHITE);
-        combateMensagemTopo.setStyle("-fx-background-color: rgba(0, 0, 0, 0.6); -fx-padding: 15; -fx-background-radius: 8; -fx-effect: dropshadow(gaussian, black, 10, 0.5, 0, 0);");
+        combateMensagemTopo.setStyle("-fx-background-color: transparent; -fx-padding: 15; -fx-effect: dropshadow(gaussian, black, 10, 0.5, 0, 0);");
         combateMensagemTopo.setVisible(false);
         StackPane.setAlignment(combateMensagemTopo, Pos.CENTER);
         combateMensagemTopo.setTranslateY(-150);
 
         btnLutar = new Button("Lutar");
         btnFugir = new Button("Fugir");
-        String lutarStyle = "-fx-background-color: #28a745; -fx-text-fill: white; -fx-font-size: 18px; -fx-padding: 12 28; -fx-cursor: hand; -fx-background-radius: 5; -fx-border-color: #1e7e34; -fx-border-width: 2;";
-        String fugirStyle = "-fx-background-color: #c82333; -fx-text-fill: white; -fx-font-size: 18px; -fx-padding: 12 28; -fx-cursor: hand; -fx-background-radius: 5; -fx-border-color: #a31221; -fx-border-width: 2;";
+        String lutarStyle = "-fx-background-color: #c82333; -fx-text-fill: white; -fx-font-size: 18px; -fx-padding: 12 28; -fx-cursor: hand; -fx-background-radius: 5; -fx-border-color: #a31221; -fx-border-width: 2;";
+        String fugirStyle = "-fx-background-color: #e0a800; -fx-text-fill: white; -fx-font-size: 18px; -fx-padding: 12 28; -fx-cursor: hand; -fx-background-radius: 5; -fx-border-color: #b38600; -fx-border-width: 2;";
         btnLutar.setStyle(lutarStyle);
         btnFugir.setStyle(fugirStyle);
 
         painelAcoesCombate = new HBox(40, btnLutar, btnFugir);
         painelAcoesCombate.setAlignment(Pos.CENTER);
         painelAcoesCombate.setVisible(false);
-        StackPane.setAlignment(painelAcoesCombate, Pos.CENTER);
-        painelAcoesCombate.setTranslateY(80);
+        StackPane.setAlignment(painelAcoesCombate, Pos.BOTTOM_CENTER);
+        StackPane.setMargin(painelAcoesCombate, new Insets(0,0,150,0));
 
         legendaPanel = new VBox(5);
         legendaPanel.setAlignment(Pos.TOP_CENTER);
+        legendaPanel.setPadding(new Insets(10));
+        legendaPanel.setMouseTransparent(true);
         StackPane.setAlignment(legendaPanel, Pos.TOP_CENTER);
-        StackPane.setMargin(legendaPanel, new Insets(50, 0, 0, 0));
+        StackPane.setMargin(legendaPanel, new Insets(60, 0, 0, 0));
         legendaPanel.setVisible(false);
 
         btnNovoJogo = new Button("Novo Jogo");
@@ -91,27 +97,30 @@ public class GameView {
         StackPane.setAlignment(btnNovoJogo, Pos.BOTTOM_LEFT);
         StackPane.setMargin(btnNovoJogo, new Insets(10));
 
-        StackPane centroStack = new StackPane(cenaPane, turnoLabel, ambienteAtualLabel, combateMensagemTopo, painelAcoesCombate, legendaPanel, btnNovoJogo);
+        StackPane centroStack = new StackPane(cenaPane, turnoLabel, ambienteAtualLabel, combateMensagemTopo, legendaPanel, painelAcoesCombate, btnNovoJogo);
         root.setCenter(centroStack);
 
         VBox painelDireito = new VBox(10);
         painelDireito.setPadding(new Insets(10));
         painelDireito.setPrefWidth(320);
         painelDireito.setStyle("-fx-background-color: #2a2a2a;");
+
         Label lblLog = new Label("Diário de Bordo");
         lblLog.setFont(Font.font("Arial", FontWeight.BOLD, 16));
         lblLog.setTextFill(Color.WHITE);
-        outputArea = new TextArea();
+        outputArea = new TextArea(); // Diário de Bordo
         outputArea.setEditable(false);
         outputArea.setWrapText(true);
-        outputArea.setPrefHeight(450);
+        outputArea.setPrefHeight(250);
         outputArea.setStyle("-fx-control-inner-background:#1a1a1a; -fx-font-family: 'monospaced'; -fx-text-fill: #e0e0e0;");
+
         Label lblInv = new Label("Inventário");
         lblInv.setFont(Font.font("Arial", FontWeight.BOLD, 22));
         lblInv.setTextFill(Color.WHITE);
         lblInv.setMaxWidth(Double.MAX_VALUE);
         lblInv.setAlignment(Pos.CENTER);
         painelInventario = new PainelInventario(onUseItemCallback);
+
         painelDireito.getChildren().addAll(lblLog, outputArea, lblInv, painelInventario);
         root.setRight(painelDireito);
 
@@ -125,7 +134,7 @@ public class GameView {
         listaDeAdjacentes.getChildren().add(lblAdjacentes);
         root.setLeft(listaDeAdjacentes);
 
-        FlowPane painelAcoesPrincipais = new FlowPane(15, 15);
+        painelAcoesPrincipais = new FlowPane(15, 15);
         painelAcoesPrincipais.setAlignment(Pos.CENTER);
         painelAcoesPrincipais.setPadding(new Insets(15));
         painelAcoesPrincipais.setStyle("-fx-background-color: #2a2a2a; -fx-border-color: #404040; -fx-border-width: 2 0 0 0;");
@@ -143,87 +152,99 @@ public class GameView {
     public Button getBtnNovoJogo() { return btnNovoJogo; }
     public CenaPane getCenaPane() { return cenaPane; }
 
-    public void limparLog() { outputArea.clear(); }
     public void appendOutput(String text) { if (text != null) outputArea.appendText(text.endsWith("\n") ? text : text + "\n"); }
-    public void atualizarInventario(Inventario inventario) { painelInventario.atualizar(inventario); }
 
-    public void atualizarPainelMovimento(List<Ambiente> destinos, Consumer<Ambiente> onMoverClick, boolean emCombate) {
+    public void atualizarInventario(Inventario inventario) { if (painelInventario != null) painelInventario.atualizar(inventario); }
+
+    public void atualizarPainelMovimento(List<Ambiente> destinos, Consumer<Ambiente> onMoverClick, boolean desabilitarPainel) {
+        if (listaDeAdjacentes == null) return;
         if (listaDeAdjacentes.getChildren().size() > 1) {
             listaDeAdjacentes.getChildren().remove(1, listaDeAdjacentes.getChildren().size());
         }
-        for (Ambiente destino : destinos) {
-            ImageView thumbnail = GerenciadorDeImagens.getImageView(destino.getNomeImagem(), THUMBNAIL_SIZE, THUMBNAIL_SIZE);
-            Button btnMover = new Button("", thumbnail);
-            btnMover.setPrefSize(THUMBNAIL_SIZE, THUMBNAIL_SIZE);
-            btnMover.setStyle("-fx-background-color: transparent; -fx-padding: 2;");
-            btnMover.setOnAction(e -> onMoverClick.accept(destino));
-            btnMover.setDisable(emCombate);
-            Tooltip.install(btnMover, new Tooltip(destino.getNome()));
-            listaDeAdjacentes.getChildren().add(btnMover);
+        listaDeAdjacentes.setDisable(desabilitarPainel);
+        if (destinos.isEmpty() && !desabilitarPainel) {
+            listaDeAdjacentes.getChildren().add(new Label("Nenhum"));
+            return;
+        }
+        if (!desabilitarPainel) {
+            for (Ambiente destino : destinos) {
+                ImageView thumbnail = GerenciadorDeImagens.getImageView(destino.getChaveImagemFundo(), THUMBNAIL_SIZE, THUMBNAIL_SIZE);
+                Button btnMover = new Button("", thumbnail);
+                btnMover.setPrefSize(THUMBNAIL_SIZE, THUMBNAIL_SIZE);
+                btnMover.setStyle("-fx-background-color: transparent; -fx-padding: 2; -fx-cursor: hand;");
+                btnMover.setOnAction(e -> onMoverClick.accept(destino));
+                Tooltip.install(btnMover, new Tooltip(destino.getNome()));
+                listaDeAdjacentes.getChildren().add(btnMover);
+            }
         }
     }
 
+    public void habilitarAcoes() {
+        if (painelAcoesPrincipais != null) painelAcoesPrincipais.setDisable(false);
+        if (listaDeAdjacentes != null) listaDeAdjacentes.setDisable(false);
+        if (painelInventario != null) painelInventario.setInterativo(true);
+    }
+
     public void desabilitarAcoes() {
-        btnExplorar.setDisable(true);
-        btnDescansar.setDisable(true);
-        btnProximoTurno.setDisable(true);
+        if (painelAcoesPrincipais != null) painelAcoesPrincipais.setDisable(true);
         if (listaDeAdjacentes != null) listaDeAdjacentes.setDisable(true);
+        if (painelInventario != null) painelInventario.setInterativo(false);
     }
 
     public void mostrarControlesCombate(String mensagem, Consumer<String> onAction) {
-        combateMensagemTopo.setText(mensagem);
-        combateMensagemTopo.setVisible(true);
-        btnLutar.setOnAction(e -> onAction.accept("lutar"));
-        btnFugir.setOnAction(e -> onAction.accept("fugir"));
-        painelAcoesCombate.setVisible(true);
-        root.getBottom().setVisible(false);
+        if (combateMensagemTopo != null) {
+            combateMensagemTopo.setText(mensagem);
+            combateMensagemTopo.setVisible(true);
+        }
+        if (btnLutar != null) btnLutar.setOnAction(e -> onAction.accept("lutar"));
+        if (btnFugir != null) btnFugir.setOnAction(e -> onAction.accept("fugir"));
+
+        if (painelAcoesCombate != null) {
+            painelAcoesCombate.setVisible(true);
+            painelAcoesCombate.setDisable(false);
+        }
+        if (painelAcoesPrincipais != null) painelAcoesPrincipais.setVisible(false);
     }
 
     public void esconderControlesCombate() {
-        painelAcoesCombate.setVisible(false);
-        combateMensagemTopo.setVisible(false);
+        if (painelAcoesCombate != null) {
+            painelAcoesCombate.setVisible(false);
+            painelAcoesCombate.setDisable(true);
+        }
+        if (combateMensagemTopo != null) combateMensagemTopo.setVisible(false);
         limparLegenda();
-        root.getBottom().setVisible(true);
+        if (painelAcoesPrincipais != null) painelAcoesPrincipais.setVisible(true);
     }
 
     public void exibirMensagem(String... mensagens) {
+        if (legendaPanel == null) return;
         limparLegenda();
         for (String msg : mensagens) {
-            if (msg != null && !msg.isEmpty()) {
-                Label linha = new Label(msg);
-                linha.setFont(Font.font("Arial", FontWeight.NORMAL, 16));
-                linha.setTextFill(Color.WHITE);
-                linha.setStyle("-fx-effect: dropshadow(gaussian, black, 3, 0.7, 0, 0);");
-                legendaPanel.getChildren().add(linha);
-            }
+            if (msg == null || msg.trim().isEmpty()) continue;
+
+            Label linha = new Label(msg);
+            linha.setFont(Font.font("Arial", FontWeight.BOLD, 22)); // Fonte maior
+            linha.setTextFill(Color.WHITE);
+            linha.setStyle("-fx-effect: dropshadow(gaussian, black, 3, 0.9, 0, 0);");
+            legendaPanel.getChildren().add(linha);
         }
         legendaPanel.setVisible(true);
     }
 
     public void limparLegenda() {
-        legendaPanel.getChildren().clear();
-        legendaPanel.setVisible(false);
+        if(legendaPanel != null) legendaPanel.getChildren().clear();
+        if(legendaPanel != null) legendaPanel.setVisible(false);
     }
 
     public void atualizarTurno(int turno) {
-        turnoLabel.setText("Dia " + turno);
+        if(turnoLabel != null) turnoLabel.setText("Dia " + turno);
     }
 
     public void atualizarAmbienteAtual(String nomeAmbiente) {
-        ambienteAtualLabel.setText(nomeAmbiente);
+        if(ambienteAtualLabel != null) ambienteAtualLabel.setText(nomeAmbiente);
     }
 
-    public void exibirLogCombate(String... logs) {
-        exibirMensagem(logs);
-    }
+    public void exibirLegenda(String s) {
 
-    public void setControlesCombateDesabilitado(boolean desabilitado) {
-        if (painelAcoesCombate != null) {
-            painelAcoesCombate.setDisable(desabilitado);
-        }
-    }
-
-    public HBox getPainelCombate() {
-        return painelAcoesCombate;
     }
 }

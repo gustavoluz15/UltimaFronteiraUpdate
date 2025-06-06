@@ -4,34 +4,32 @@ import com.ultimafronteira.model.Personagem;
 import com.ultimafronteira.world.Ambiente;
 
 public class EventoClimatico extends Evento {
-    private int duracao;
-    private String chaveImagemFundoOverride;
     private String tipoDeClima;
+    private int duracaoBase;
+    private int duracaoAtual;
+    private String efeitoNoAmbiente;
+    private String chaveImagemFundoOverride;
 
-    public EventoClimatico(String nome, String descricao, double probabilidade, String tipoDeClima, int duracao, String chaveImagemOverride) {
+    public EventoClimatico(String nome, String descricao, double probabilidade,
+                           String tipoDeClima, int duracao, String efeitoNoAmbiente, String chaveImagemFundoOverride) {
         super(nome, descricao, probabilidade, "Clima/Ambiente");
         this.tipoDeClima = tipoDeClima;
-        this.duracao = duracao;
-        this.chaveImagemFundoOverride = chaveImagemOverride;
+        this.duracaoBase = duracao;
+        this.duracaoAtual = duracao;
+        this.efeitoNoAmbiente = efeitoNoAmbiente;
+        this.chaveImagemFundoOverride = chaveImagemFundoOverride;
     }
 
-    public int getDuracao() { return duracao; }
+    public String getTipoDeClima() { return tipoDeClima; }
     public String getChaveImagemFundoOverride() { return chaveImagemFundoOverride; }
-    public void decrementarDuracao() { if (this.duracao > 0) this.duracao--; }
+    public int getDuracao() { return duracaoAtual; }
+    public void decrementarDuracao() { this.duracaoAtual = Math.max(0, this.duracaoAtual - 1); }
 
     @Override
     public String executar(Personagem jogador, Ambiente local, int numeroDoTurno) {
-        switch (this.tipoDeClima) {
-            case "Nevasca":
-                jogador.setEnergia(jogador.getEnergia() - 15);
-                return getDescricao() + " O frio intenso drena sua energia.";
-            case "Tempestade":
-                jogador.setEnergia(jogador.getEnergia() - 10);
-                return getDescricao() + " A chuva e o vento dificultam a jornada.";
-            case "Calor":
-                jogador.setSede(jogador.getSede() - 20);
-                return getDescricao() + " Sua garganta seca rapidamente.";
-        }
-        return "O tempo permanece instável.";
+        StringBuilder sb = new StringBuilder();
+        sb.append(getDescricao()).append("\n");
+        sb.append("Efeito: ").append(efeitoNoAmbiente);
+        return sb.toString();
     }
 }

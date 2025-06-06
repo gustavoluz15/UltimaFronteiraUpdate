@@ -17,8 +17,8 @@ public class Arma extends Item {
     public int getAlcance() { return alcance; }
 
     @Override
-    public void usar(Personagem jogador) {
-        if (jogador == null) return;
-        jogador.equiparArma(this);
+    public String usar(Personagem jogador) {
+        if (jogador == null) return "Ninguém para usar a arma.";
+        return jogador.equiparArma(this);
     }
 }

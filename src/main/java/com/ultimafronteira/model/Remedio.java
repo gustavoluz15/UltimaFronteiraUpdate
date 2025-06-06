@@ -1,43 +1,45 @@
 package com.ultimafronteira.model;
 
 public class Remedio extends Item {
-    private String tipo; // Ex: Bandagem, Antídoto, Analgésico
-    private String efeito; // Descrição do efeito, ex: "Cura 25 de vida", "Remove veneno"
-    private int valorEfeito; // Quantidade numérica do efeito, se aplicável
+    private String tipoEfeito;
+    private int valorEfeito;
 
-    public Remedio(String nome, double peso, String tipo, String efeito, int valorEfeito, String chaveImagem) {
-        super(nome, peso, 1, chaveImagem); // Remédios são geralmente consumíveis (durabilidade 1)
-        this.tipo = tipo;
-        this.efeito = efeito;
+    public Remedio(String nome, double peso, int durabilidade, String tipoEfeito, int valorEfeito, String chaveImagem) {
+        super(nome, peso, durabilidade, chaveImagem);
+        this.tipoEfeito = tipoEfeito;
         this.valorEfeito = valorEfeito;
     }
 
-    public String getTipo() {
-        return tipo;
-    }
-
-    public String getEfeito() {
-        return efeito;
-    }
-
-    public int getValorEfeito() {
-        return valorEfeito;
-    }
+    public String getTipoEfeito() { return tipoEfeito; }
+    public int getValorEfeito() { return valorEfeito; }
 
     @Override
-    public void usar(Personagem jogador) {
-        System.out.println(jogador.getNome() + " usou o remédio: " + getNome() + " (" + tipo + ").");
+    public String usar(Personagem jogador) {
+        if (jogador == null) return "Ninguém para usar o item.";
+        StringBuilder sb = new StringBuilder();
 
-        if (this.efeito.toLowerCase().contains("cura") && this.efeito.toLowerCase().contains("vida")) {
-            int vidaAntes = jogador.getVida();
-            jogador.setVida(jogador.getVida() + this.valorEfeito);
-            System.out.println("Efeito: " + this.efeito + ". Vida restaurada em " + this.valorEfeito + " (de " + vidaAntes + " para " + jogador.getVida() + ").");
-        } else if (this.efeito.toLowerCase().contains("cura") && this.efeito.toLowerCase().contains("sanidade")) {
-            jogador.setSanidade(jogador.getSanidade() + this.valorEfeito);
-            System.out.println("Efeito: " + this.efeito + ". Sanidade restaurada em " + this.valorEfeito + ".");
-        } else {
-            // Para outros efeitos, você pode adicionar mais condições ou uma descrição genérica
-            System.out.println("Efeito aplicado: " + this.efeito);
+        switch (tipoEfeito.toLowerCase()) {
+            case "vida":
+                int vidaAntes = jogador.getVida();
+                jogador.setVida(jogador.getVida() + valorEfeito);
+                sb.append("Vida recuperada em ").append(jogador.getVida() - vidaAntes).append(" pontos.");
+                break;
+            case "sanidade":
+                int sanidadeAntes = jogador.getSanidade();
+                jogador.setSanidade(jogador.getSanidade() + valorEfeito);
+                sb.append("Sanidade recuperada em ").append(jogador.getSanidade() - sanidadeAntes).append(" pontos.");
+                break;
+            case "energia":
+                int energiaAntes = jogador.getEnergia();
+                jogador.setEnergia(jogador.getEnergia() + valorEfeito);
+                sb.append("Energia recuperada em ").append(jogador.getEnergia() - energiaAntes).append(" pontos.");
+                break;
+            default:
+                sb.append("Mas parece não ter tido um efeito claro...");
+                break;
         }
+
+        setDurabilidade(getDurabilidade() - 1);
+        return sb.toString();
     }
 }

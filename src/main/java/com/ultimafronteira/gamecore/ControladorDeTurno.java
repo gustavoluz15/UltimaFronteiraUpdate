@@ -1,8 +1,8 @@
 package com.ultimafronteira.gamecore;
 
-import com.ultimafronteira.events.GerenciadorDeEventos;
 import com.ultimafronteira.model.Personagem;
-// Removido import desnecessário: import com.ultimafronteira.world.Ambiente;
+import com.ultimafronteira.events.GerenciadorDeEventos;
+import com.ultimafronteira.world.Ambiente;
 
 public class ControladorDeTurno {
     private Personagem jogador;
@@ -10,7 +10,8 @@ public class ControladorDeTurno {
     private int numeroDoTurno;
     private boolean jogoTerminou;
     private String mensagemFimDeJogo;
-    private final int TURNOS_PARA_VITORIA_TEMPO = 50; // Aumentado para um jogo mais longo
+
+    private final int TURNOS_PARA_VITORIA_TEMPO = 10;
 
     public ControladorDeTurno(Personagem jogador, GerenciadorDeEventos gerenciadorDeEventos) {
         this.jogador = jogador;
@@ -26,82 +27,87 @@ public class ControladorDeTurno {
 
     public void forcarFimDeJogo(String mensagem) {
         if (!this.jogoTerminou) {
-            this.jogoTerminou = true;
-            this.mensagemFimDeJogo = "FIM DE JOGO - " + mensagem;
+            terminarJogo(mensagem);
         }
     }
 
-    private void verificarCondicoesDeFimDeJogo() {
+    private void terminarJogo(String mensagem) {
+        this.jogoTerminou = true;
+        this.mensagemFimDeJogo = mensagem;
+    }
+
+    public void verificarCondicoesDeFimDeJogo() {
         if (jogoTerminou) return;
+
         if (jogador.getVida() <= 0) {
-            forcarFimDeJogo("DERROTA\n" + jogador.getNome() + " não resistiu aos ferimentos.");
+            terminarJogo(jogador.getNome() + " não resistiu aos perigos e sucumbiu.\nFIM DE JOGO - DERROTA");
         } else if (jogador.getSanidade() <= 0) {
-            forcarFimDeJogo("DERROTA\n" + jogador.getNome() + " perdeu a sanidade para a solidão.");
-        } else if (jogador.getFome() <= 0 && jogador.getVida() > 0) { // Verifica se já morreu por outros motivos
-            forcarFimDeJogo("DERROTA\n" + jogador.getNome() + " sucumbiu à inanição.");
-        } else if (jogador.getSede() <= 0 && jogador.getVida() > 0) { // Verifica se já morreu por outros motivos
-            forcarFimDeJogo("DERROTA\n" + jogador.getNome() + " não resistiu à desidratação.");
-        } else if (this.numeroDoTurno > TURNOS_PARA_VITORIA_TEMPO) {
-            forcarFimDeJogo("VITÓRIA!\n" + jogador.getNome() + " sobreviveu por " + TURNOS_PARA_VITORIA_TEMPO + " longos dias!");
+            terminarJogo(jogador.getNome() + " perdeu a sanidade, entregando-se à loucura.\nFIM DE JOGO - DERROTA");
+        } else if (jogador.getFome() <= 0) {
+            terminarJogo(jogador.getNome() + " morreu de inanição.\nFIM DE JOGO - DERROTA");
+        } else if (jogador.getSede() <= 0) {
+            terminarJogo(jogador.getNome() + " morreu de desidratação.\nFIM DE JOGO - DERROTA");
+        }
+
+        if (!jogoTerminou && this.numeroDoTurno >= TURNOS_PARA_VITORIA_TEMPO) {
+            terminarJogo(jogador.getNome() + " sobreviveu por " + TURNOS_PARA_VITORIA_TEMPO + " dias! Uma façanha incrível!\nFIM DE JOGO - VITÓRIA!");
         }
     }
 
-    public String executarAcaoDoJogador(Acao acao) {
-        if (jogoTerminou) return "O jogo já terminou.\n" + mensagemFimDeJogo;
+    public String executarProximoTurno() {
+        if (jogoTerminou) { return "O jogo já terminou.\n" + mensagemFimDeJogo; }
 
         StringBuilder logDoTurno = new StringBuilder();
-        logDoTurno.append("--- TURNO ").append(numeroDoTurno).append(" ---\n");
 
-        switch (acao) {
-            case EXPLORAR:
-                // CORREÇÃO: Chamando o método explorarAmbiente com a assinatura correta.
-                logDoTurno.append(jogador.explorarAmbiente(numeroDoTurno));
-                break;
-            case DESCANSAR:
-                int energiaRecuperada = 20 + (jogador.temHabilidade("Descanso Eficaz") ? 10 : 0); // Exemplo de bônus
-                jogador.setEnergia(Math.min(100, jogador.getEnergia() + energiaRecuperada));
-                logDoTurno.append("Você descansa e recupera ").append(energiaRecuperada).append(" de energia.\n");
-                break;
-            case AVANCAR_TURNO:
-                logDoTurno.append("Você decide esperar e observar o ambiente...\n");
-                break;
+        String logManutencao = faseDeManutencao();
+        logDoTurno.append(logManutencao); // Adiciona o log da manutenção
+
+        verificarCondicoesDeFimDeJogo();
+        if(jogoTerminou) {
+            logDoTurno.append("\n").append(this.mensagemFimDeJogo);
+            return logDoTurno.toString();
         }
-        verificarCondicoesDeFimDeJogo();
-        if (jogoTerminou) return logDoTurno.append(mensagemFimDeJogo).append("\n").toString();
-
-        String resultadoEvento = gerenciadorDeEventos.sortearEExecutarEvento(jogador, jogador.getLocalizacaoAtual(), this.numeroDoTurno);
-        logDoTurno.append(resultadoEvento).append("\n");
-        verificarCondicoesDeFimDeJogo();
-        if (jogoTerminou) return logDoTurno.append(mensagemFimDeJogo).append("\n").toString();
-
-        logDoTurno.append(faseDeManutencao());
-        verificarCondicoesDeFimDeJogo();
-        if (jogoTerminou) return logDoTurno.append(mensagemFimDeJogo).append("\n").toString();
 
         this.numeroDoTurno++;
+        logDoTurno.append("\n--- Início do Dia ").append(numeroDoTurno).append(" ---\n");
+        logDoTurno.append(faseDeInicio());
+
+        String logEvento = faseDeEventoAleatorio();
+        logDoTurno.append(logEvento);
+        verificarCondicoesDeFimDeJogo();
+        if(jogoTerminou) { logDoTurno.append("\n").append(this.mensagemFimDeJogo); }
+
         return logDoTurno.toString();
     }
 
+    private String faseDeInicio() {
+        Ambiente ambienteAtual = jogador.getLocalizacaoAtual();
+        if (ambienteAtual != null) {
+            return ambienteAtual.modificarClima();
+        }
+        return "Um novo dia começa.\n";
+    }
+
+    private String faseDeEventoAleatorio() {
+        return gerenciadorDeEventos.sortearEExecutarEvento(jogador, jogador.getLocalizacaoAtual(), this.numeroDoTurno);
+    }
+
     private String faseDeManutencao() {
-        StringBuilder sb = new StringBuilder("\nO tempo passa...\n");
+        StringBuilder sb = new StringBuilder();
+        sb.append("--- Fim do Dia ").append(numeroDoTurno).append(" ---\n");
         int fomePerdida = 5 + (numeroDoTurno / 10);
         int sedePerdida = 7 + (numeroDoTurno / 8);
 
-        jogador.setFome(jogador.getFome() - fomePerdida);
-        sb.append("- Fome aumenta (").append(fomePerdida).append(")\n");
-        if (jogador.getFome() <= 0) {
-            int danoFome = 2 + (numeroDoTurno / 15);
-            jogador.setVida(jogador.getVida() - danoFome);
-            sb.append("FOME CRÍTICA! Você perde ").append(danoFome).append(" de vida.\n");
+        if (jogador.temHabilidade("Metabolismo Eficiente")) {
+            fomePerdida = (int) (fomePerdida * 0.7);
+            sedePerdida = (int) (sedePerdida * 0.7);
+            sb.append("Seu metabolismo eficiente reduz o cansaço da noite.\n");
         }
 
+        jogador.setFome(jogador.getFome() - fomePerdida);
         jogador.setSede(jogador.getSede() - sedePerdida);
-        sb.append("- Sede aumenta (").append(sedePerdida).append(")\n");
-        if (jogador.getSede() <= 0) {
-            int danoSede = 3 + (numeroDoTurno / 12);
-            jogador.setVida(jogador.getVida() - danoSede);
-            sb.append("SEDE CRÍTICA! Você perde ").append(danoSede).append(" de vida.\n");
-        }
+        sb.append("A noite cai... Fome -").append(fomePerdida).append(", Sede -").append(sedePerdida).append(".\n");
+
         return sb.toString();
     }
 }

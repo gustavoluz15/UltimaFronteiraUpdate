@@ -2,100 +2,83 @@ package com.ultimafronteira.visual;
 
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import java.io.InputStream;
+import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
 
 public class GerenciadorDeImagens {
 
-    private static final Map<String, Image> cacheDeImagens = new HashMap<>();
-    private static final Map<String, String> caminhosDasImagens = new HashMap<>();
+    private static final Map<String, Image> imagens = new HashMap<>();
 
     public static void carregarImagens() {
-        System.out.println("Registrando caminhos das imagens...");
-        // Personagens
-        caminhosDasImagens.put("personagem_medico", "/Imagens/medico.png");
-        caminhosDasImagens.put("personagem_mecanico", "/Imagens/mecanico.png");
-        caminhosDasImagens.put("personagem_rastreador", "/Imagens/rastreador.png");
-        caminhosDasImagens.put("personagem_sobrevivente", "/Imagens/sobrevivente.png");
+        System.out.println("Iniciando carregamento de imagens para JavaFX...");
+        try {
+            carregar("fundo_caverna", "/Imagens/Caverna.jpg");
+            carregar("fundo_cidade_ruinas", "/Imagens/CidadeRuinas.jpg");
+            carregar("fundo_floresta", "/Imagens/Floresta.jpg");
+            carregar("fundo_lago_rio", "/Imagens/LagoRio.jpg");
+            carregar("fundo_pico_geada", "/Imagens/PicoGeada.jpg");
 
-        // Criaturas
-        caminhosDasImagens.put("criatura_lobo", "/Imagens/lobo.png");
-        caminhosDasImagens.put("criatura_cobra", "/Imagens/cobra.png");
-        caminhosDasImagens.put("criatura_corvo", "/Imagens/corvo.png");
-
-        // Ambientes e Clima
-        caminhosDasImagens.put("fundo_floresta", "/Imagens/floresta.jpg");
-        caminhosDasImagens.put("fundo_caverna", "/Imagens/caverna.jpg");
-        caminhosDasImagens.put("fundo_montanha", "/Imagens/montanha.jpg");
-        caminhosDasImagens.put("fundo_ruinas", "/Imagens/ruinas.jpg");
-        caminhosDasImagens.put("fundo_rio", "/Imagens/rio.jpg"); // Usado por fundo_lago_rio
-        caminhosDasImagens.put("fundo_pico_geada", "/Imagens/montanha.jpg"); // Pode ser a mesma da montanha
-        caminhosDasImagens.put("fundo_lago_rio", "/Imagens/rio.jpg");
-        caminhosDasImagens.put("fundo_cidade_ruinas", "/Imagens/ruinas.jpg");
-        caminhosDasImagens.put("fundo_tempestade", "/Imagens/tempestade.jpg");
-        caminhosDasImagens.put("fundo_calor", "/Imagens/deserto.jpg"); // Ex: Imagem para calor
-        caminhosDasImagens.put("fundo_pico_geada_nevasca", "/Imagens/montanha_nevasca.jpg"); // Ex: Imagem específica
-        caminhosDasImagens.put("fundo_pico_geada_tempestade", "/Imagens/montanha_tempestade.jpg"); // Ex: Imagem específica
+            carregar("fundo_tempestade", "/Imagens/Tempestade.jpeg");
+            carregar("fundo_calor", "/Imagens/Calor.jpg");
+            carregar("fundo_pico_geada_tempestade", "/Imagens/PicoGeadaTempestade.jpeg");
+            carregar("fundo_pico_geada_nevasca", "/Imagens/PicoGeadaNevasca.jpeg");
 
 
-        // Itens (Exemplos, adicione as suas)
-        caminhosDasImagens.put("item_comida_frutas", "/Imagens/frutas.png");
-        caminhosDasImagens.put("item_cogumelo", "/Imagens/cogumelo.png");
-        caminhosDasImagens.put("item_madeira", "/Imagens/madeira.png");
-        caminhosDasImagens.put("item_pedra", "/Imagens/pedra.png");
-        caminhosDasImagens.put("item_cristal", "/Imagens/cristal.png");
-        caminhosDasImagens.put("item_agua", "/Imagens/agua.png");
-        caminhosDasImagens.put("item_peixe", "/Imagens/peixe.png");
-        caminhosDasImagens.put("item_juncos", "/Imagens/juncos.png");
-        caminhosDasImagens.put("item_pedra_afiada", "/Imagens/pedra_afiada.png");
-        caminhosDasImagens.put("item_minerio_ferro", "/Imagens/minerio_ferro.png");
-        caminhosDasImagens.put("item_metal", "/Imagens/metal.png");
-        caminhosDasImagens.put("item_tijolo", "/Imagens/tijolo.png");
-        caminhosDasImagens.put("item_ferramenta", "/Imagens/ferramenta.png");
-        caminhosDasImagens.put("item_enlatado", "/Imagens/enlatado.png");
-        caminhosDasImagens.put("item_racao", "/Imagens/racao.png");
-        caminhosDasImagens.put("item_carne_crua", "/Imagens/carne_crua.png");
+            carregar("personagem_mecanico", "/Imagens/Mecanico.png");
+            carregar("personagem_medico", "/Imagens/Medico.png");
+            carregar("personagem_rastreador", "/Imagens/Rastreador.png");
+            carregar("personagem_sobrevivente", "/Imagens/Sobrevivente.png");
 
 
-        // UI
-        caminhosDasImagens.put("ui_inventario", "/Imagens/inventario.jpg"); // Se você tiver
+            carregar("criatura_cobra", "/Imagens/Cobra.png");
+            carregar("criatura_corvo", "/Imagens/Corvo.png");
+            carregar("criatura_lobo", "/Imagens/Lobo.png");
+
+
+            carregar("item_comida_frutas", "/Imagens/Frutas.jpg");
+            carregar("item_comida_comida", "/Imagens/Comida2.jpg");
+
+            carregar("item_remedio", "/Imagens/Remedio.jpg");
+            carregar("item_suprimentos", "/Imagens/Comida1.jpg");
+
+            carregar("arma_machado", "/Imagens/Machado.jpg");
+            carregar("ferramenta", "/Imagens/Ferramenta.jpg");
+
+            carregar("item_frasco_energia", "/Imagens/Energia.jpg");
+            carregar("item_frasco_agua", "/Imagens/Agua.jpg");
+            carregar("item_frasco_sanidade", "/Imagens/Sanidade.jpg");
+            carregar("item_comida2", "/Imagens/Comida1.jpg");
+            carregar("item_frasco_vida", "/Imagens/Vida.jpg");
+            carregar("item_espada_buff", "/Imagens/Espada.jpg");
+            carregar("item_escudo_buff", "/Imagens/Escudo.jpg");
+            carregar("item_cogumelo", "/Imagens/Cogumelo.jpg");
+
+
+        } catch (Exception e) {
+            System.err.println("ERRO CRÍTICO: Não foi possível carregar os recursos de imagem.");
+            e.printStackTrace();
+        }
+    }
+
+    private static void carregar(String chave, String caminho) {
+        URL resourceUrl = GerenciadorDeImagens.class.getResource(caminho);
+        if (resourceUrl != null) {
+            imagens.put(chave, new Image(resourceUrl.toExternalForm()));
+        } else {
+            System.err.println("AVISO: Imagem não encontrada em: " + caminho + " (Chave: " + chave + ")");
+        }
     }
 
     public static Image getImagem(String chave) {
-        if (chave == null || chave.isEmpty()) {
-            // System.err.println("AVISO: Tentativa de carregar imagem com chave nula ou vazia.");
-            return null;
-        }
-        if (cacheDeImagens.containsKey(chave)) {
-            return cacheDeImagens.get(chave);
-        }
-        String caminho = caminhosDasImagens.get(chave);
-        if (caminho == null) {
-            System.err.println("AVISO: Chave de imagem não registrada no GerenciadorDeImagens: " + chave);
-            return null;
-        }
-        try (InputStream stream = GerenciadorDeImagens.class.getResourceAsStream(caminho)) {
-            if (stream == null) {
-                System.err.println("ERRO: Arquivo de imagem não encontrado em: " + caminho + " (Chave: " + chave + ")");
-                return null;
-            }
-            Image imagem = new Image(stream);
-            cacheDeImagens.put(chave, imagem);
-            return imagem;
-        } catch (Exception e) {
-            System.err.println("ERRO CRÍTICO ao carregar imagem: " + caminho + " (Chave: " + chave + ")");
-            e.printStackTrace();
-            return null;
-        }
+        return imagens.get(chave);
     }
 
-    public static ImageView getImageView(String chave, double largura, double altura) {
-        Image img = getImagem(chave);
-        ImageView imageView = new ImageView(img); // ImageView lida com imagem nula (não desenha)
-        imageView.setFitWidth(largura);
-        imageView.setFitHeight(altura);
-        imageView.setPreserveRatio(true);
+    public static ImageView getImageView(String chave, double width, double height) {
+        ImageView imageView = new ImageView(getImagem(chave));
+        imageView.setFitWidth(width);
+        imageView.setFitHeight(height);
+        imageView.setPreserveRatio(false);
         return imageView;
     }
 }

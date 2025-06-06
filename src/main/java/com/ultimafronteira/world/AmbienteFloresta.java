@@ -4,26 +4,36 @@ import com.ultimafronteira.model.Personagem;
 import com.ultimafronteira.model.Alimento;
 import com.ultimafronteira.model.Material;
 import com.ultimafronteira.model.Item;
+import com.ultimafronteira.events.GerenciadorDeEventos;
+import java.util.ArrayList;
+import java.util.List;
 
 public class AmbienteFloresta extends Ambiente {
     private boolean vegetacaoDensa;
     private boolean faunaAbundante;
+    private boolean climaUmido;
 
-    public AmbienteFloresta(String nome, String descricao) {
-        super(nome, descricao, "Moderada", "Úmido e Temperado", "fundo_floresta");
+    public AmbienteFloresta(String nome, String descricao, String chaveImagemFundo) {
+        super(nome, descricao, "Moderada", "Úmido e Temperado", chaveImagemFundo);
         this.vegetacaoDensa = true;
         this.faunaAbundante = true;
+        this.climaUmido = true;
         inicializarRecursos();
     }
 
     private void inicializarRecursos() {
-        adicionarRecurso(new Alimento("Frutas Silvestres", 0.3, 1, 5, 2, "Fruta", "item_comida_frutas"));
-        adicionarRecurso(new Material("Madeira de Pinheiro", 2.0, "Madeira", 4, "item_madeira"));
-        adicionarRecurso(new Alimento("Cogumelos Comestíveis", 0.1, 1, 3, 1, "Cogumelo", "item_cogumelo"));
+        // CORREÇÃO: Construtor de Alimento agora com 6 argumentos (sem valorCura)
+        adicionarRecurso(new Alimento("Frutas Silvestres", 0.3, 1, 15, "Fruta", "item_comida_frutas"));
+        adicionarRecurso(new Alimento("Cogumelos Comestiveis", 0.1, 1, 8, "Cogumelo", "item_cogumelo"));
+        adicionarRecurso(new Material("Gravetos Secos", 1.0, "Madeira", 2, "item_madeira"));
     }
 
+    public boolean isVegetacaoDensa() { return vegetacaoDensa; }
+    public boolean isFaunaAbundante() { return faunaAbundante; }
+    public boolean isClimaUmido() { return climaUmido; }
+
     @Override
-    public String explorar(Personagem jogador, int numeroDoTurno) {
+    public String explorar(Personagem jogador, GerenciadorDeEventos ge, int numeroDoTurno) {
         StringBuilder sb = new StringBuilder();
         sb.append(jogador.getNome()).append(" está explorando ").append(getNome()).append(".\n");
 
@@ -54,15 +64,23 @@ public class AmbienteFloresta extends Ambiente {
         jogador.setEnergia(jogador.getEnergia() - energiaGasta);
         sb.append(jogador.getNome()).append(" gastou ").append(energiaGasta).append(" de energia.\n");
 
-        // A chamada ao GerenciadorDeEventos foi removida daqui.
-        // O ControladorDeTurno agora é responsável por essa fase.
+        sb.append("--- Verificando eventos durante a exploração ---\n");
+        String resultadoEventoExploracao = ge.sortearEExecutarEvento(jogador, this, numeroDoTurno);
+        sb.append(resultadoEventoExploracao);
 
         return sb.toString();
     }
 
     @Override
     public String modificarClima() {
-        // ... (seu método modificarClima permanece o mesmo) ...
-        return "O clima na floresta permanece estável.\n";
+        StringBuilder sb = new StringBuilder();
+        if (Math.random() < 0.2) {
+            this.condicoesClimaticasPredominantes = "Chuva Leve na Floresta";
+            sb.append("O tempo mudou em ").append(getNome()).append(". Agora está: ").append(this.condicoesClimaticasPredominantes).append("\n");
+        } else {
+            this.condicoesClimaticasPredominantes = "Tempo Estável na Floresta";
+            sb.append("O tempo em ").append(getNome()).append(" permanece: ").append(this.condicoesClimaticasPredominantes).append(".\n");
+        }
+        return sb.toString();
     }
 }

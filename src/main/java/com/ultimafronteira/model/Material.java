@@ -10,20 +10,11 @@ public class Material extends Item {
         this.resistencia = resistencia;
     }
 
-    public String getTipo() {
-        return tipo;
-    }
-
-    public int getResistencia() {
-        return resistencia;
-    }
+    public String getTipo() { return tipo; }
+    public int getResistencia() { return resistencia; }
 
     @Override
-    public void usar(Personagem jogador) {
-        System.out.println("O material " + getNome() + " não pode ser usado diretamente desta forma. Use-o para combinar ou construir.");
-    }
-
-    public void combinar(Material outroMaterial) {
-        System.out.println("Tentando combinar " + getNome() + " com " + outroMaterial.getNome());
+    public String usar(Personagem jogador) {
+        return "O material '" + getNome() + "' não pode ser usado diretamente. Use-o para fabricar itens.";
     }
 }

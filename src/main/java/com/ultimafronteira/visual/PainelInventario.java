@@ -13,7 +13,7 @@ public class PainelInventario extends GridPane {
     private final int NUM_COLUNAS = 4;
     private final int NUM_LINHAS = 3;
 
-    public PainelInventario(Consumer<Item> onUseCallback) {
+    public PainelInventario(Consumer<Item> onUseItemCallback) {
         this.setHgap(10);
         this.setVgap(10);
         this.setAlignment(Pos.CENTER);
@@ -22,7 +22,7 @@ public class PainelInventario extends GridPane {
 
         for (int i = 0; i < NUM_LINHAS; i++) {
             for (int j = 0; j < NUM_COLUNAS; j++) {
-                this.add(new SlotInventario(onUseCallback), j, i);
+                this.add(new SlotInventario(onUseItemCallback), j, i);
             }
         }
     }
@@ -41,5 +41,9 @@ public class PainelInventario extends GridPane {
                 }
             }
         }
+    }
+
+    public void setInterativo(boolean interativo) {
+        this.setDisable(!interativo);
     }
 }

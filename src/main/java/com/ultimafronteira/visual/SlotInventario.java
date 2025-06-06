@@ -63,7 +63,7 @@ public class SlotInventario extends StackPane {
             if (item instanceof Alimento) {
                 tooltipTexto.append("\nTipo: Alimento");
                 tooltipTexto.append("\nRestaura ").append(((Alimento) item).getValorNutricional()).append(" de fome.");
-                tooltipTexto.append("\nRestaura ").append(((Alimento) item).getValorCura()).append(" de vida.");
+
             } else if (item instanceof Arma) {
                 tooltipTexto.append("\nTipo: Arma");
                 tooltipTexto.append("\nDano: ").append(((Arma) item).getDano());

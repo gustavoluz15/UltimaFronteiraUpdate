@@ -17,12 +17,19 @@ public class Agua extends Item {
     public double getVolume() { return volume; }
 
     @Override
-    public void usar(Personagem jogador) {
-        if (jogador == null) return;
+    public String usar(Personagem jogador) {
+        if (jogador == null) return "Ninguém para beber a água.";
+        StringBuilder sb = new StringBuilder();
         if ("potável".equalsIgnoreCase(pureza)) {
+            int sedeAntes = jogador.getSede();
             jogador.setSede(jogador.getSede() + valorHidratacao);
+            sb.append("Sede recuperada em ").append(jogador.getSede() - sedeAntes).append(" pontos.");
         } else {
-            jogador.setVida(jogador.getVida() - 5);
+            int danoCausado = 5;
+            jogador.setVida(jogador.getVida() - danoCausado);
+            sb.append("A água estava contaminada! Você se sente mal e perde ").append(danoCausado).append(" de vida.");
         }
+        setDurabilidade(getDurabilidade() - 1);
+        return sb.toString();
     }
 }

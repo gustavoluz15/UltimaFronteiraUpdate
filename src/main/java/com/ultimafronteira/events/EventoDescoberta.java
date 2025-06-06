@@ -1,44 +1,61 @@
-// Local do Arquivo: src/main/java/com/ultimafronteira/events/EventoDescoberta.java
 package com.ultimafronteira.events;
 
-import com.ultimafronteira.model.Alimento;
 import com.ultimafronteira.model.Item;
 import com.ultimafronteira.model.Personagem;
 import com.ultimafronteira.world.Ambiente;
-import java.util.Random;
+import java.util.List;
 
 public class EventoDescoberta extends Evento {
 
-    private Random random = new Random();
+    private final List<Item> recursosEncontrados;
+    private final String condicaoEspecial;
 
-    public EventoDescoberta() {
-        super("Descoberta de Suprimentos",
-                "Você encontra vestígios de outros sobreviventes ou recursos deixados para trás.",
-                0.25,
-                "Positivo");
+    /**
+     * Construtor para um evento de descoberta específico.
+     * @param nome O nome do evento, ex: "Abrigo Abandonado".
+     * @param descricao A descrição para o jogador.
+     * @param probabilidade A chance base de ocorrência.
+     * @param recursos A lista de itens a serem encontrados neste evento.
+     * @param condicaoEspecial Uma condição opcional, como "Requer Ferramenta".
+     */
+    public EventoDescoberta(String nome, String descricao, double probabilidade, List<Item> recursos, String condicaoEspecial) {
+        super(nome, descricao, probabilidade, "Descoberta");
+        this.recursosEncontrados = recursos;
+        this.condicaoEspecial = condicaoEspecial;
     }
 
     @Override
     public String executar(Personagem jogador, Ambiente local, int numeroDoTurno) {
-        StringBuilder sb = new StringBuilder();
-        sb.append(getDescricao()).append("\n");
+        StringBuilder sb = new StringBuilder(getDescricao() + "\n");
 
-        Item itemEncontrado = new Alimento(
-                "Frutas Silvestres Encontradas", // 1. nome
-                0.3,                           // 2. peso
-                1,                             // 3. durabilidade
-                10,                            // 4. valorNutricional
-                3,                             // 5. valorCura  <-- O ARGUMENTO QUE ESTAVA IMPLÍCITO ANTES
-                "Fruta",                       // 6. tipo
-                "item_comida_frutas"           // 7. chaveImagem
-        );
+        // Verifica se há uma condição especial para este evento
+        if (condicaoEspecial != null && !condicaoEspecial.isEmpty()) {
+            if ("Requer Ferramenta".equals(condicaoEspecial)) {
+                // Lógica para verificar se o jogador tem a ferramenta necessária
+                boolean possuiFerramenta = jogador.getInventario().getItens().stream()
+                        .anyMatch(item -> item.getNome().toLowerCase().contains("pá") || item.getNome().toLowerCase().contains("picareta"));
 
-        sb.append("Você encontrou um(a) ").append(itemEncontrado.getNome()).append("!\n");
+                if (!possuiFerramenta) {
+                    sb.append("Você encontrou algo, mas não tem a ferramenta certa para acessá-lo.");
+                    return sb.toString();
+                }
+                sb.append("Usando suas ferramentas, você revela o que estava escondido!\n");
+            }
+        }
 
-        if (jogador.getInventario().adicionarItem(itemEncontrado)) {
-            sb.append(itemEncontrado.getNome()).append(" foi adicionado ao seu inventário.");
-        } else {
-            sb.append("Seu inventário está cheio, e você teve que deixar o item para trás.");
+        if (recursosEncontrados == null || recursosEncontrados.isEmpty()) {
+            sb.append("...mas não havia nada de útil.");
+            return sb.toString();
+        }
+
+        sb.append("Você encontrou:\n");
+        for (Item item : recursosEncontrados) {
+            sb.append("- ").append(item.getNome()).append("\n");
+            if (jogador.getInventario().adicionarItem(item)) {
+                sb.append("Item adicionado ao inventário.\n");
+            } else {
+                sb.append("Seu inventário está cheio e o item foi deixado para trás.\n");
+            }
         }
 
         return sb.toString();

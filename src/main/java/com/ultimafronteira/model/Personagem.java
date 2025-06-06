@@ -1,10 +1,9 @@
 package com.ultimafronteira.model;
 
 import com.ultimafronteira.world.Ambiente;
-import com.ultimafronteira.events.GerenciadorDeEventos;
+// Removido import desnecessário: import com.ultimafronteira.events.GerenciadorDeEventos;
 import java.util.List;
 import java.util.ArrayList;
-import java.util.Optional;
 
 public class Personagem {
     private String nome;
@@ -36,8 +35,10 @@ public class Personagem {
 
         aplicarBonusDeClasseEAdicionarHabilidadesIniciais();
 
-        this.vidaMaxima = Math.min(100, this.vida);
-        this.vida = this.vidaMaxima;
+        // Garante que os status não ultrapassem os máximos após os bônus
+        this.vidaMaxima = Math.min(100, this.vida); // Vida máxima é definida aqui
+        this.vida = this.vidaMaxima;                // Começa com vida máxima
+
         this.fome = Math.min(100, this.fome);
         this.sede = Math.min(100, this.sede);
         this.energia = Math.min(100, this.energia);
@@ -93,7 +94,7 @@ public class Personagem {
         if (this.armaEquipada != null) {
             return this.armaEquipada.getDano();
         }
-        return 2;
+        return 2; // Dano base desarmado
     }
 
     public String equiparArma(Arma novaArma) {
@@ -109,13 +110,10 @@ public class Personagem {
         return "Arma '" + novaArma.getNome() + "' não encontrada no inventário.";
     }
 
-    public String getStatus() {
-        return "";
-    }
-
-    public String explorarAmbiente(GerenciadorDeEventos ge, int numeroDoTurno) {
+    // CORREÇÃO: Assinatura do método explorarAmbiente ajustada.
+    public String explorarAmbiente(int numeroDoTurno) {
         if (this.localizacaoAtual != null) {
-            return this.localizacaoAtual.explorar(this, ge, numeroDoTurno);
+            return this.localizacaoAtual.explorar(this, numeroDoTurno);
         }
         return this.nome + " não está em nenhum ambiente conhecido para explorar.";
     }

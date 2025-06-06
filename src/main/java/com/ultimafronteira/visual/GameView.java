@@ -34,7 +34,7 @@ public class GameView {
     private Label ambienteAtualLabel;
     private VBox legendaPanel;
     private Label combateMensagemTopo;
-    private HBox painelAcoesCombate;
+    private HBox painelAcoesCombate; // Variável de classe para o painel de combate
     private Button btnLutar;
     private Button btnFugir;
     private final int THUMBNAIL_SIZE = 80;
@@ -140,7 +140,7 @@ public class GameView {
     public Button getBtnExplorar() { return btnExplorar; }
     public Button getBtnDescansar() { return btnDescansar; }
     public Button getBtnProximoTurno() { return btnProximoTurno; }
-    public Button getBtnNovoJogo() { return btnNovoJogo; } // <-- MÉTODO ADICIONADO
+    public Button getBtnNovoJogo() { return btnNovoJogo; }
     public CenaPane getCenaPane() { return cenaPane; }
 
     public void limparLog() { outputArea.clear(); }
@@ -215,5 +215,15 @@ public class GameView {
 
     public void exibirLogCombate(String... logs) {
         exibirMensagem(logs);
+    }
+
+    public void setControlesCombateDesabilitado(boolean desabilitado) {
+        if (painelAcoesCombate != null) {
+            painelAcoesCombate.setDisable(desabilitado);
+        }
+    }
+
+    public HBox getPainelCombate() {
+        return painelAcoesCombate;
     }
 }

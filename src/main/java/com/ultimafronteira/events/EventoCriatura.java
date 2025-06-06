@@ -5,16 +5,19 @@ import com.ultimafronteira.world.Ambiente;
 import java.util.Random;
 
 public class EventoCriatura extends Evento {
-
     private String tipoDeCriatura;
     private int vidaBaseCriatura;
-    private int vidaAtualCriatura;
     private int danoBaseCriatura;
     private String chaveImagem;
+    private int vidaAtualCriatura;
     private Random random = new Random();
 
-    public EventoCriatura() {
-        super("Encontro Hostil", "Algo se move nas sombras, observando você.", 0.25, "Confronto com Criatura");
+    public EventoCriatura(String nome, String descricao, double probabilidade, String tipoDeCriatura, int vidaBase, int danoBase, String chaveImagem) {
+        super(nome, descricao, probabilidade, "Confronto");
+        this.tipoDeCriatura = tipoDeCriatura;
+        this.vidaBaseCriatura = vidaBase;
+        this.danoBaseCriatura = danoBase;
+        this.chaveImagem = chaveImagem;
     }
 
     public String getTipoDeCriatura() { return tipoDeCriatura; }
@@ -24,31 +27,8 @@ public class EventoCriatura extends Evento {
 
     @Override
     public String executar(Personagem jogador, Ambiente local, int numeroDoTurno) {
-        int criaturaSorteada = random.nextInt(3);
-
-        switch (criaturaSorteada) {
-            case 0:
-                this.tipoDeCriatura = "Lobo Faminto";
-                this.vidaBaseCriatura = 30;
-                this.danoBaseCriatura = 10;
-                this.chaveImagem = "criatura_lobo";
-                break;
-            case 1:
-                this.tipoDeCriatura = "Cobra Venenosa";
-                this.vidaBaseCriatura = 15;
-                this.danoBaseCriatura = 8;
-                this.chaveImagem = "criatura_cobra";
-                break;
-            case 2:
-                this.tipoDeCriatura = "Corvo Ameaçador";
-                this.vidaBaseCriatura = 10;
-                this.danoBaseCriatura = 5;
-                this.chaveImagem = "criatura_corvo";
-                break;
-        }
-
+        // A vida da criatura escala um pouco com o progresso do jogo
         this.vidaAtualCriatura = this.vidaBaseCriatura + (numeroDoTurno / 2);
-
         return "Um " + this.tipoDeCriatura + " surge, pronto para atacar!";
     }
 
@@ -62,6 +42,7 @@ public class EventoCriatura extends Evento {
     }
 
     public int calcularDanoEfetivoCriatura(int numeroDoTurno) {
+        // Dano da criatura também escala um pouco
         return this.danoBaseCriatura + random.nextInt(3) + (numeroDoTurno / 5);
     }
 }

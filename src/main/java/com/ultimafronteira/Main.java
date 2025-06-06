@@ -1,16 +1,14 @@
 package com.ultimafronteira;
 
-import com.ultimafronteira.events.Evento;
-import com.ultimafronteira.events.EventoCriatura;
-import com.ultimafronteira.events.EventoClimatico;
-import com.ultimafronteira.events.EventoDescoberta;
-import com.ultimafronteira.events.GerenciadorDeEventos;
+import com.ultimafronteira.events.*;
+import com.ultimafronteira.gamecore.Acao;
 import com.ultimafronteira.gamecore.ControladorDeTurno;
 import com.ultimafronteira.model.*;
 import com.ultimafronteira.visual.GameView;
 import com.ultimafronteira.visual.GerenciadorDeImagens;
 import com.ultimafronteira.world.Ambiente;
 import com.ultimafronteira.world.GerenciadorDeAmbientes;
+import javafx.animation.PauseTransition;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
@@ -23,12 +21,12 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.stage.Stage;
+import javafx.util.Duration;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.Random;
-import java.util.function.Consumer;
+// Removido import desnecessário: import java.util.function.Consumer;
 
 public class Main extends Application {
 
@@ -44,23 +42,32 @@ public class Main extends Application {
     private GameView gameView;
     private Stage primaryStage;
 
-    private final int VIDA_BASE_PADRAO = 85;
-    private final int FOME_BASE_PADRAO = 75;
-    private final int SEDE_BASE_PADRAO = 75;
-    private final int ENERGIA_BASE_PADRAO = 90;
-    private final int SANIDADE_BASE_PADRAO = 60;
-    private final double PESO_INV_PADRAO = 20.0;
+    private final int VIDA_BASE_PADRAO = 100; // Aumentado para mais tolerância
+    private final int FOME_BASE_PADRAO = 100;
+    private final int SEDE_BASE_PADRAO = 100;
+    private final int ENERGIA_BASE_PADRAO = 100;
+    private final int SANIDADE_BASE_PADRAO = 80;
+    private final double PESO_INV_PADRAO = 25.0;
 
     @Override
     public void start(Stage primaryStage) {
         try {
             this.primaryStage = primaryStage;
-            GerenciadorDeImagens.carregarImagens();
+            GerenciadorDeImagens.carregarImagens(); // Carrega as imagens uma vez
             primaryStage.setTitle("Última Fronteira - Criação de Personagem");
             mostrarCenaCriacaoPersonagem();
         } catch (Throwable t) {
             System.err.println("!!! ERRO FATAL DURANTE A INICIALIZAÇÃO !!!");
             t.printStackTrace();
+        }
+    }
+
+    private void reiniciarAplicacao() {
+        Main novaInstancia = new Main();
+        try {
+            novaInstancia.start(this.primaryStage);
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
@@ -74,7 +81,7 @@ public class Main extends Application {
         HBox nomeBox = new HBox(10);
         nomeBox.setAlignment(Pos.CENTER_LEFT);
         Label lblNome = new Label("Nome:");
-        TextField txtNome = new TextField("Nome do Personagem");
+        TextField txtNome = new TextField("Aventureiro");
         txtNome.setPromptText("Digite o nome");
         txtNome.setPrefWidth(200);
         nomeBox.getChildren().addAll(lblNome, txtNome);
@@ -83,7 +90,7 @@ public class Main extends Application {
         Label lblClasse = new Label("Classe:");
         ComboBox<ClassePersonagem> cbClasse = new ComboBox<>();
         cbClasse.getItems().addAll(ClassePersonagem.values());
-        cbClasse.setValue(ClassePersonagem.MECANICO);
+        cbClasse.setValue(ClassePersonagem.SOBREVIVENTE_NATO);
         classeBox.getChildren().addAll(lblClasse, cbClasse);
         VBox detalhesClasseBox = new VBox(10);
         detalhesClasseBox.setPadding(new Insets(10, 0, 10, 0));
@@ -126,155 +133,137 @@ public class Main extends Application {
     private void iniciarJogoPrincipal(String nomeJogador, ClassePersonagem classeEscolhida) {
         gerenciadorDeAmbientes = new GerenciadorDeAmbientes();
         Ambiente ambienteInicial = gerenciadorDeAmbientes.getAmbientePorNome("Floresta dos Sussurros");
+        if (ambienteInicial == null) { // Fallback caso o ambiente padrão não seja encontrado
+            ambienteInicial = gerenciadorDeAmbientes.getTodosAmbientes().stream().findFirst().orElse(null);
+            if (ambienteInicial == null) {
+                mostrarAlerta("Erro Crítico", "Nenhum ambiente inicial pôde ser carregado. O jogo não pode começar.");
+                return;
+            }
+        }
 
-        String chaveImagemPersonagem = "personagem_sobrevivente";
+        String chaveImagemPersonagem = "personagem_sobrevivente"; // Padrão
         switch (classeEscolhida) {
             case MECANICO: chaveImagemPersonagem = "personagem_mecanico"; break;
             case MEDICO: chaveImagemPersonagem = "personagem_medico"; break;
             case RASTREADOR: chaveImagemPersonagem = "personagem_rastreador"; break;
+            case SOBREVIVENTE_NATO: chaveImagemPersonagem = "personagem_sobrevivente"; break;
         }
 
         jogador = new Personagem(nomeJogador, classeEscolhida, VIDA_BASE_PADRAO, FOME_BASE_PADRAO, SEDE_BASE_PADRAO, ENERGIA_BASE_PADRAO, SANIDADE_BASE_PADRAO, ambienteInicial, PESO_INV_PADRAO, chaveImagemPersonagem);
         gerenciadorDeEventos = new GerenciadorDeEventos();
         controladorDeTurno = new ControladorDeTurno(jogador, gerenciadorDeEventos);
-
         gameView = new GameView(this::processarUsoDeItem);
 
-        gameView.getBtnExplorar().setOnAction(e -> executarAcao(this::processarExploracao));
-        gameView.getBtnProximoTurno().setOnAction(e -> executarAcao(this::processarProximoTurno));
-        gameView.getBtnDescansar().setOnAction(e -> executarAcao(this::processarDescanso));
-        gameView.getBtnNovoJogo().setOnAction(e -> mostrarCenaCriacaoPersonagem());
+        gameView.getBtnExplorar().setOnAction(e -> processarAcaoDoControlador(Acao.EXPLORAR));
+        gameView.getBtnDescansar().setOnAction(e -> processarAcaoDoControlador(Acao.DESCANSAR));
+        gameView.getBtnProximoTurno().setOnAction(e -> processarAcaoDoControlador(Acao.AVANCAR_TURNO));
+        gameView.getBtnNovoJogo().setOnAction(e -> reiniciarAplicacao());
 
         primaryStage.setTitle("Última Fronteira");
         primaryStage.setScene(gameView.getScene());
         primaryStage.centerOnScreen();
-
-        gameView.appendOutput("Bem-vindo ao Última Fronteira, " + jogador.getNome() + "!");
+        gameView.appendOutput("Bem-vindo ao Última Fronteira, " + jogador.getNome() + "!\n");
         atualizarTodaUI();
+    }
+
+    private void processarAcaoDoControlador(Acao acao) {
+        if (emConfronto || (controladorDeTurno != null && controladorDeTurno.isJogoTerminou())) return;
+
+        gameView.limparLog(); // Limpa o log antes de adicionar novas mensagens
+        String resultadoDoTurno = controladorDeTurno.executarAcaoDoJogador(acao);
+        gameView.appendOutput(resultadoDoTurno);
+
+        verificarEventosPosAcao(); // Renomeado para clareza
+
+        if (controladorDeTurno.isJogoTerminou()) {
+            finalizarJogo();
+        } else if (!emConfronto) {
+            atualizarTodaUI();
+        }
     }
 
     private void atualizarTodaUI() {
         if (gameView == null || jogador == null) return;
-
         EventoCriatura inimigo = emConfronto ? eventoConfrontoAtual : null;
-        gameView.getCenaPane().desenharCena(jogador, inimigo, jogador.getLocalizacaoAtual(), eventoClimaticoAtivo);
+        // Garante que o ambiente atual do jogador é usado para desenhar
+        Ambiente ambienteParaDesenhar = jogador.getLocalizacaoAtual();
+        if (ambienteParaDesenhar == null && gerenciadorDeAmbientes != null) { // Fallback se o jogador não tiver localização
+            ambienteParaDesenhar = gerenciadorDeAmbientes.getAmbienteGlobalPadrao();
+        }
+
+        gameView.getCenaPane().desenharCena(jogador, inimigo, ambienteParaDesenhar, eventoClimaticoAtivo);
         gameView.atualizarInventario(jogador.getInventario());
         atualizarBotoesDeMovimento();
-        gameView.atualizarTurno(controladorDeTurno.getNumeroDoTurno());
-        gameView.atualizarAmbienteAtual(jogador.getLocalizacaoAtual().getNome());
-    }
-
-    private void executarAcao(Runnable acao) {
-        if (emConfronto) {
-            return;
-        }
-        if (controladorDeTurno.isJogoTerminou()) {
-            return;
-        }
-        gameView.limparLegenda();
-        acao.run();
-
-        if (controladorDeTurno.isJogoTerminou()) {
-            finalizarJogo();
-        }
-    }
-
-    private void processarProximoTurno() {
-        gameView.limparLog();
-        if (eventoClimaticoAtivo != null) {
-            eventoClimaticoAtivo.decrementarDuracao();
-            if (eventoClimaticoAtivo.getDuracao() <= 0) {
-                gameView.appendOutput("O tempo voltou ao normal.");
-                eventoClimaticoAtivo = null;
-            }
-        }
-        String logDoTurno = controladorDeTurno.executarProximoTurno();
-        gameView.appendOutput("> O tempo avança...\n" + logDoTurno);
-        verificarEventos();
-        if (!emConfronto) {
-            atualizarTodaUI();
-        }
-    }
-
-    private void processarExploracao() {
-        String resultadoExploracao = jogador.explorarAmbiente(gerenciadorDeEventos, controladorDeTurno.getNumeroDoTurno());
-        String[] linhas = resultadoExploracao.split("\n");
-        exibirMensagem(linhas);
-
-        verificarEventos();
-        if (!emConfronto) {
-            atualizarTodaUI();
-        }
-    }
-
-    private void processarDescanso() {
-        int energiaRecuperada = 10;
-        int fomePerdida = 10;
-        jogador.setEnergia(jogador.getEnergia() + energiaRecuperada);
-        jogador.setFome(jogador.getFome() - fomePerdida);
-        exibirMensagem("Você recuperou " + energiaRecuperada + " de energia.", "Sua fome aumentou em " + fomePerdida + ".");
-        atualizarTodaUI();
+        if(controladorDeTurno != null) gameView.atualizarTurno(controladorDeTurno.getNumeroDoTurno());
+        if(ambienteParaDesenhar != null) gameView.atualizarAmbienteAtual(ambienteParaDesenhar.getNome());
     }
 
     private void processarUsoDeItem(Item item) {
-        if (item == null || (emConfronto && !(item instanceof Remedio))) {
+        if (item == null || (emConfronto && !(item instanceof Remedio || item instanceof Arma))) {
             exibirMensagem("Você não pode usar '" + (item != null ? item.getNome() : "") + "' agora.");
             return;
         }
         item.usar(jogador);
-        exibirMensagem("Você usou: " + item.getNome());
-
-        if (item.getDurabilidade() == 1 && !(item instanceof Arma)) {
+        gameView.appendOutput("Você usou: " + item.getNome() + "\n");
+        if (item.getDurabilidade() == 1 && !(item instanceof Arma)) { // Armas não são consumidas no uso
             jogador.getInventario().removerItem(item.getNome());
         }
         atualizarTodaUI();
     }
 
     private void processarMovimento(Ambiente destino) {
+        if (emConfronto || (controladorDeTurno != null && controladorDeTurno.isJogoTerminou())) return;
+
+        gameView.limparLog();
         int custoEnergia = 15;
         if (jogador.getEnergia() >= custoEnergia) {
             jogador.setEnergia(jogador.getEnergia() - custoEnergia);
+
+            // CORREÇÃO: Usando a assinatura correta do método
             gerenciadorDeAmbientes.mudarAmbienteAtualDoJogador(jogador, destino.getNome());
-            exibirMensagem("Você viajou para " + destino.getNome() + ".");
+
+            gameView.appendOutput("Você viajou para " + destino.getNome() + ".\n");
+
             String resultadoEvento = gerenciadorDeEventos.sortearEExecutarEvento(jogador, destino, controladorDeTurno.getNumeroDoTurno());
             gameView.appendOutput(resultadoEvento);
-            verificarEventos();
+
+            verificarEventosPosAcao();
             if (!emConfronto) {
                 atualizarTodaUI();
             }
         } else {
             exibirMensagem("Energia insuficiente para viajar.");
+            atualizarTodaUI(); // Atualiza a UI mesmo se a viagem falhar
         }
     }
 
     private void atualizarBotoesDeMovimento() {
-        if (gameView == null || gerenciadorDeAmbientes == null) return;
+        if (gameView == null || gerenciadorDeAmbientes == null || jogador == null || jogador.getLocalizacaoAtual() == null) return;
         List<Ambiente> destinos = gerenciadorDeAmbientes.getAmbientesAdjacentes(jogador.getLocalizacaoAtual().getNome());
         gameView.atualizarPainelMovimento(destinos, this::processarMovimento, emConfronto);
     }
 
-    private void verificarEventos() {
+    private void verificarEventosPosAcao() { // Renomeado e lógica ajustada
         Evento eventoSorteado = gerenciadorDeEventos.getEventoSorteadoAtual();
         if (eventoSorteado != null) {
             if (eventoSorteado instanceof EventoCriatura) {
                 this.eventoConfrontoAtual = (EventoCriatura) eventoSorteado;
                 entrarModoConfronto();
             } else if (eventoSorteado instanceof EventoClimatico) {
-                if (this.eventoClimaticoAtivo == null) {
-                    this.eventoClimaticoAtivo = (EventoClimatico) eventoSorteado;
-                    exibirMensagem(eventoSorteado.getNome(), eventoSorteado.getDescricao());
-                }
-            } else if (eventoSorteado instanceof EventoDescoberta) {
-                exibirMensagem(eventoSorteado.getNome(), eventoSorteado.getDescricao());
+                this.eventoClimaticoAtivo = (EventoClimatico) eventoSorteado;
+                // A mensagem do evento climático já é dada pelo evento.executar()
+                atualizarTodaUI(); // Atualiza para mostrar mudança de clima
             }
-            gerenciadorDeEventos.limparEventoSorteadoAtual();
+            // Eventos de Descoberta e DoencaFerimento já exibem suas mensagens via executar()
+            // e não precisam de tratamento especial aqui, a menos que alterem estado que exija UI imediata.
+            gerenciadorDeEventos.limparEventoSorteadoAtual(); // Limpa após processar
         }
     }
 
     private void entrarModoConfronto() {
         this.emConfronto = true;
         gameView.limparLegenda();
-        atualizarTodaUI();
+        atualizarTodaUI(); // Desenha o inimigo
         gameView.mostrarControlesCombate(
                 "Um " + eventoConfrontoAtual.getTipoDeCriatura() + " selvagem aparece!",
                 this::processarAcaoCombate
@@ -282,10 +271,11 @@ public class Main extends Application {
     }
 
     private void sairModoConfronto(String mensagem) {
-        emConfronto = false;
-        eventoConfrontoAtual = null;
         gameView.exibirMensagem(mensagem);
         gameView.esconderControlesCombate();
+        emConfronto = false;
+        eventoConfrontoAtual = null;
+        gerenciadorDeEventos.limparEventoSorteadoAtual();
         atualizarTodaUI();
     }
 
@@ -301,56 +291,68 @@ public class Main extends Application {
 
     private void processarLuta() {
         if (!emConfronto || eventoConfrontoAtual == null) return;
+        gameView.setControlesCombateDesabilitado(true);
 
         int danoJogador = jogador.calcularDanoBase();
-        String logAtaqueJogador = eventoConfrontoAtual.receberDano(danoJogador);
-
-        exibirMensagem(jogador.getNome() + " ataca!", logAtaqueJogador);
+        eventoConfrontoAtual.receberDano(danoJogador);
+        exibirMensagem(jogador.getNome() + " ataca!", "A criatura sofre " + danoJogador + " de dano.");
+        atualizarTodaUI();
 
         if (eventoConfrontoAtual.getVidaAtualCriatura() <= 0) {
-            sairModoConfronto("Você venceu o combate!");
-            // Adicionar recompensas aqui
+            PauseTransition vitoriaDelay = new PauseTransition(Duration.seconds(1.5));
+            vitoriaDelay.setOnFinished(e -> sairModoConfronto("Você venceu o combate!"));
+            vitoriaDelay.play();
             return;
         }
 
-        int danoCriatura = eventoConfrontoAtual.calcularDanoEfetivoCriatura(controladorDeTurno.getNumeroDoTurno());
-        jogador.setVida(jogador.getVida() - danoCriatura);
+        PauseTransition delayAtaqueInimigo = new PauseTransition(Duration.seconds(1.5));
+        delayAtaqueInimigo.setOnFinished(event -> {
+            try {
+                if (!emConfronto) return; // Verifica se o combate ainda está ativo
+                int danoCriatura = eventoConfrontoAtual.calcularDanoEfetivoCriatura(controladorDeTurno.getNumeroDoTurno());
+                jogador.setVida(jogador.getVida() - danoCriatura);
+                exibirMensagem("O inimigo revida!", "Você sofre " + danoCriatura + " de dano.");
+                atualizarTodaUI();
 
-        new java.util.Timer().schedule(
-                new java.util.TimerTask() {
-                    @Override
-                    public void run() {
-                        Platform.runLater(() -> {
-                            exibirMensagem("O inimigo revida!", "Você sofre " + danoCriatura + " de dano.");
-                            atualizarTodaUI();
-                            if (jogador.getVida() <= 0) {
-                                controladorDeTurno.forcarFimDeJogo(jogador.getNome() + " foi derrotado em combate.");
-                                finalizarJogo();
-                            }
-                        });
-                    }
-                },
-                2000
-        );
+                if (jogador.getVida() <= 0) {
+                    controladorDeTurno.forcarFimDeJogo("DERROTA\n" + jogador.getNome() + " foi derrotado em combate.");
+                    finalizarJogo();
+                } else {
+                    gameView.setControlesCombateDesabilitado(false);
+                }
+            } catch (Exception e) {
+                System.err.println("### ERRO INESPERADO NO COMBATE ###");
+                e.printStackTrace();
+            }
+        });
+        delayAtaqueInimigo.play();
     }
 
     private void processarFuga() {
-        if (!emConfronto) return;
+        if (!emConfronto || eventoConfrontoAtual == null) return;
+        gameView.setControlesCombateDesabilitado(true);
         exibirMensagem("Você tenta fugir...");
-        double chanceDeFuga = 0.5;
-        if (random.nextDouble() < chanceDeFuga) {
-            sairModoConfronto("Você conseguiu escapar!");
-        } else {
-            int danoCriatura = eventoConfrontoAtual.calcularDanoEfetivoCriatura(controladorDeTurno.getNumeroDoTurno());
-            jogador.setVida(jogador.getVida() - danoCriatura);
-            exibirMensagem("A fuga falhou!", "Você sofre " + danoCriatura + " de dano.");
-            atualizarTodaUI();
 
-            if (jogador.getVida() <= 0) {
-                controladorDeTurno.forcarFimDeJogo(jogador.getNome() + " foi derrotado ao tentar fugir.");
-                finalizarJogo();
+        PauseTransition delayFuga = new PauseTransition(Duration.seconds(1.5));
+        delayFuga.setOnFinished(event -> {
+            if (random.nextDouble() < 0.5) {
+                sairModoConfronto("Você conseguiu escapar!");
+            } else {
+                if (!emConfronto) return;
+                int danoCriatura = eventoConfrontoAtual.calcularDanoEfetivoCriatura(controladorDeTurno.getNumeroDoTurno());
+                jogador.setVida(jogador.getVida() - danoCriatura);
+                exibirMensagem("A fuga falhou!", "Você sofre " + danoCriatura + " de dano.");
+                atualizarTodaUI();
+
+                if (jogador.getVida() <= 0) {
+                    controladorDeTurno.forcarFimDeJogo("DERROTA\n" + jogador.getNome() + " foi derrotado ao tentar fugir.");
+                    finalizarJogo();
+                } else {
+                    gameView.setControlesCombateDesabilitado(false);
+                }
             }
-        }
+        });
+        delayFuga.play();
     }
 
     private void exibirMensagem(String... mensagens) {
@@ -359,10 +361,15 @@ public class Main extends Application {
 
     private void finalizarJogo() {
         gameView.desabilitarAcoes();
-        sairModoConfronto("");
-
+        if (emConfronto) {
+            // Não precisa exibir mensagem aqui, o popup cuidará disso.
+            // Apenas garante que saia do modo de confronto.
+            gameView.esconderControlesCombate();
+            emConfronto = false;
+            eventoConfrontoAtual = null;
+            gerenciadorDeEventos.limparEventoSorteadoAtual();
+        }
         String mensagemFinal = controladorDeTurno.getMensagemFimDeJogo();
-
         Platform.runLater(() -> {
             if (mensagemFinal.contains("VITÓRIA")) {
                 mostrarPopupDeVitoria(mensagemFinal);
@@ -375,8 +382,8 @@ public class Main extends Application {
     private void mostrarPopupDeDerrota(String conteudo) {
         Alert alert = new Alert(Alert.AlertType.NONE);
         alert.setTitle("Fim de Jogo");
-        alert.setHeaderText("Você Morreu, Fim de Jogo!");
-        alert.setContentText(conteudo.replace("FIM DE JOGO - DERROTA", "").trim());
+        alert.setHeaderText("Você Morreu!"); // Simplificado
+        alert.setContentText(conteudo.replace("FIM DE JOGO - DERROTA\n", "").trim());
         DialogPane dialogPane = alert.getDialogPane();
         dialogPane.setStyle("-fx-background-color: #5B2C2C; -fx-border-color: #a04040;");
         Label headerLabel = (Label) dialogPane.lookup(".header-panel .label");
@@ -389,8 +396,8 @@ public class Main extends Application {
     private void mostrarPopupDeVitoria(String conteudo) {
         Alert alert = new Alert(Alert.AlertType.NONE);
         alert.setTitle("Fim de Jogo");
-        alert.setHeaderText("Parabéns, você sobreviveu!");
-        alert.setContentText(conteudo.replace("FIM DE JOGO - VITÓRIA!", "").trim());
+        alert.setHeaderText("Parabéns, Você Venceu!"); // Simplificado
+        alert.setContentText(conteudo.replace("FIM DE JOGO - VITÓRIA!\n", "").trim());
         DialogPane dialogPane = alert.getDialogPane();
         dialogPane.setStyle("-fx-background-color: #2C5B2C; -fx-border-color: #40a040;");
         Label headerLabel = (Label) dialogPane.lookup(".header-panel .label");
